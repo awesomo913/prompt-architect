@@ -17,6 +17,7 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 import json
 import os
+import platform
 import re
 import sys
 import hashlib
@@ -71,6 +72,8 @@ AUTOSAVE_INTERVAL_MS = 120000  # 120s for Pi to reduce SD card wear
 INPUT_LIMITS = {"task": 50 * 1024, "context": 100 * 1024, "custom_constraints": 10 * 1024}
 TEMPLATE_SCHEMA_KEYS = {"build_target", "enhancements", "role", "reasoning",
                         "output_format", "constraints", "custom_constraints", "context", "task"}
+# Screen width at or below this pixel count uses a compact fixed geometry rather than maximizing
+_PI_SMALL_SCREEN_WIDTH = 800
 
 
 def _setup_logging() -> logging.Logger:
@@ -415,6 +418,9 @@ class PromptArchitectPi:
 
         self._view_menu = tk.Menu(menubar, tearoff=0, bg=c["surface"], fg=c["text"])
         self._view_menu.add_command(label="Toggle Theme", command=self._toggle_theme, accelerator="Ctrl+T")
+        self._view_menu.add_separator()
+        self._view_menu.add_command(label="Maximize Window", command=self._maximize_window, accelerator="F11")
+        self._view_menu.add_command(label="Restore Window Size", command=self._restore_window_size)
         menubar.add_cascade(label="View", menu=self._view_menu)
 
         self._help_menu = tk.Menu(menubar, tearoff=0, bg=c["surface"], fg=c["text"])
@@ -870,15 +876,14 @@ class PromptArchitectPi:
         self.diag.pack(fill=tk.BOTH, expand=True)
 
     def _make_diag(self) -> str:
-        import platform as pl
         start = time.time()
         sep = "=" * 60
         lines = [sep, f"  {DIAG_VERSION} -- Diagnostic Report", f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", sep, "",
                  "  No passwords or API keys are included in this report.", ""]
 
         lines.append(f"{sep}\n  1. SYSTEM INFO\n{sep}")
-        lines.append(f"  OS: {pl.system()} {pl.release()}")
-        lines.append(f"  Arch: {pl.machine()}")
+        lines.append(f"  OS: {platform.system()} {platform.release()}")
+        lines.append(f"  Arch: {platform.machine()}")
         lines.append(f"  Python: {sys.version.split()[0]}")
         lines.append(f"  Tk: {tk.TkVersion}")
         try:
@@ -1184,8 +1189,19 @@ class PromptArchitectPi:
     def _save_geometry(self):
         try:
             CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            state = ""
+            try:
+                state = self.root.state()
+            except tk.TclError:
+                pass
+            if not state:
+                try:
+                    state = "zoomed" if self.root.attributes("-zoomed") else "normal"
+                except tk.TclError:
+                    pass
+            data = {"geometry": self.root.geometry(), "state": state}
             with open(GEOMETRY_FILE, "w", encoding="utf-8") as f:
-                json.dump({"geometry": self.root.geometry()}, f)
+                json.dump(data, f)
         except Exception:
             pass
 
@@ -1195,10 +1211,66 @@ class PromptArchitectPi:
                 with open(GEOMETRY_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 geo = data.get("geometry", "")
+                state = data.get("state", "")
                 if geo and re.match(r'\d+x\d+[+\-]\d+[+\-]\d+', geo):
                     self.root.geometry(geo)
+                if state == "zoomed":
+                    self.root.after(0, self._maximize_window)
+                return
             except (OSError, json.JSONDecodeError):
                 pass
+        # First launch — maximize on larger screens; small Pi touchscreen fills naturally
+        if self.root.winfo_screenwidth() > _PI_SMALL_SCREEN_WIDTH:
+            self.root.after(0, self._maximize_window)
+
+    def _maximize_window(self):
+        """Maximize the window cross-platform."""
+        try:
+            if platform.system() == "Windows":
+                self.root.state("zoomed")
+            else:
+                self.root.attributes("-zoomed", True)
+        except tk.TclError:
+            try:
+                w = self.root.winfo_screenwidth()
+                h = self.root.winfo_screenheight()
+                self.root.geometry(f"{w}x{h}+0+0")
+            except Exception:
+                pass
+        self._set_status("Window maximized")
+
+    def _restore_window_size(self):
+        """Restore the window from maximized to its normal size."""
+        try:
+            if platform.system() == "Windows":
+                self.root.state("normal")
+            else:
+                self.root.attributes("-zoomed", False)
+        except tk.TclError:
+            pass
+        self._set_status("Window restored")
+
+    def _toggle_maximize(self):
+        """Toggle between maximized and normal window state (F11)."""
+        system = platform.system()
+        try:
+            if system == "Windows":
+                if self.root.state() == "zoomed":
+                    self._restore_window_size()
+                else:
+                    self._maximize_window()
+            else:
+                currently_zoomed = False
+                try:
+                    currently_zoomed = bool(self.root.attributes("-zoomed"))
+                except tk.TclError:
+                    pass
+                if currently_zoomed:
+                    self._restore_window_size()
+                else:
+                    self._maximize_window()
+        except tk.TclError:
+            pass
 
     # ── Session ──────────────────────────────────────────────────
 
@@ -1226,7 +1298,18 @@ class PromptArchitectPi:
     # ── Helpers ──────────────────────────────────────────────────
 
     def _show_shortcuts(self):
-        messagebox.showinfo("Shortcuts", "Ctrl+Enter  Generate\nCtrl+Shift+C  Copy\nCtrl+S  Save\nCtrl+D  Diagnostics\nCtrl+N  New session\nCtrl+T  Toggle theme\nCtrl+Z  Undo\nCtrl+Y  Redo")
+        messagebox.showinfo("Shortcuts",
+            "Ctrl+Enter     Generate\n"
+            "Ctrl+Shift+C   Copy output\n"
+            "Ctrl+S         Save\n"
+            "Ctrl+D         Diagnostics\n"
+            "Ctrl+N         New session\n"
+            "Ctrl+T         Toggle theme\n"
+            "Ctrl+Z         Undo\n"
+            "Ctrl+Y         Redo\n"
+            "Ctrl+A         Select all (in text fields)\n"
+            "F11            Toggle maximize/restore window"
+        )
 
     def _show_about(self):
         messagebox.showinfo("About", f"{APP_NAME} v{APP_VERSION}\n\nPython {sys.version.split()[0]}\nTk {tk.TkVersion}\n\nOptimized for Raspberry Pi")
@@ -1261,6 +1344,127 @@ class PromptArchitectPi:
         self.root.bind("<Control-t>", lambda e: self._toggle_theme())
         self.root.bind("<Control-z>", lambda e: self._undo())
         self.root.bind("<Control-y>", lambda e: self._redo())
+        self.root.bind("<F11>", lambda e: self._toggle_maximize())
+        self._add_text_context_menus()
+
+    def _add_text_context_menus(self):
+        """Add right-click copy/cut/paste/select-all context menus to every text widget."""
+        text_widgets = [self.task, self.ctx, self.custom_con]
+        if hasattr(self, "result"):
+            text_widgets.append(self.result)
+        for widget in text_widgets:
+            self._attach_text_menu(widget)
+        entry_widgets = [self.role_input]
+        if hasattr(self, "_history_search"):
+            entry_widgets.append(self._history_search)
+        for widget in entry_widgets:
+            self._attach_entry_menu(widget)
+
+    def _attach_text_menu(self, widget):
+        """Attach a right-click context menu to a Text or ScrolledText widget."""
+        c = self._active_colors()
+        menu = tk.Menu(self.root, tearoff=0, bg=c["surface"], fg=c["text"],
+                       activebackground=c["blue"], activeforeground=c["dark"],
+                       font=FONT)
+
+        def do_cut():
+            try:
+                sel = widget.selection_get()
+                self.root.clipboard_clear()
+                self.root.clipboard_append(sel)
+                widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            except tk.TclError:
+                pass
+
+        def do_copy():
+            try:
+                sel = widget.selection_get()
+                self.root.clipboard_clear()
+                self.root.clipboard_append(sel)
+            except tk.TclError:
+                pass
+
+        def do_paste():
+            try:
+                text = self.root.clipboard_get()
+                try:
+                    widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+                except tk.TclError:
+                    pass
+                widget.insert(tk.INSERT, text)
+            except tk.TclError:
+                pass
+
+        def do_select_all():
+            widget.tag_add(tk.SEL, "1.0", tk.END)
+            widget.mark_set(tk.INSERT, "1.0")
+
+        def do_clear():
+            widget.delete("1.0", tk.END)
+
+        menu.add_command(label="Cut         Ctrl+X", command=do_cut)
+        menu.add_command(label="Copy        Ctrl+C", command=do_copy)
+        menu.add_command(label="Paste       Ctrl+V", command=do_paste)
+        menu.add_separator()
+        menu.add_command(label="Select All  Ctrl+A", command=do_select_all)
+        menu.add_command(label="Clear", command=do_clear)
+
+        widget.bind("<Button-3>", lambda e: menu.tk_popup(e.x_root, e.y_root))
+        widget.bind("<Control-c>", lambda e: (do_copy(), "break")[-1])
+        widget.bind("<Control-x>", lambda e: (do_cut(), "break")[-1])
+        widget.bind("<Control-v>", lambda e: (do_paste(), "break")[-1])
+        widget.bind("<Control-a>", lambda e: (do_select_all(), "break")[-1])
+
+    def _attach_entry_menu(self, widget):
+        """Attach a right-click context menu to an Entry or ttk.Entry widget."""
+        c = self._active_colors()
+        menu = tk.Menu(self.root, tearoff=0, bg=c["surface"], fg=c["text"],
+                       activebackground=c["blue"], activeforeground=c["dark"],
+                       font=FONT)
+
+        def do_cut():
+            try:
+                sel = widget.selection_get()
+                self.root.clipboard_clear()
+                self.root.clipboard_append(sel)
+                widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            except (tk.TclError, AttributeError):
+                pass
+
+        def do_copy():
+            try:
+                sel = widget.selection_get()
+                self.root.clipboard_clear()
+                self.root.clipboard_append(sel)
+            except (tk.TclError, AttributeError):
+                pass
+
+        def do_paste():
+            try:
+                text = self.root.clipboard_get()
+                try:
+                    widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+                except (tk.TclError, AttributeError):
+                    pass
+                widget.insert(tk.INSERT, text)
+            except tk.TclError:
+                pass
+
+        def do_select_all():
+            widget.select_range(0, tk.END)
+            widget.icursor(tk.END)
+
+        def do_clear():
+            widget.delete(0, tk.END)
+
+        menu.add_command(label="Cut         Ctrl+X", command=do_cut)
+        menu.add_command(label="Copy        Ctrl+C", command=do_copy)
+        menu.add_command(label="Paste       Ctrl+V", command=do_paste)
+        menu.add_separator()
+        menu.add_command(label="Select All  Ctrl+A", command=do_select_all)
+        menu.add_command(label="Clear", command=do_clear)
+
+        widget.bind("<Button-3>", lambda e: menu.tk_popup(e.x_root, e.y_root))
 
 
 def main():

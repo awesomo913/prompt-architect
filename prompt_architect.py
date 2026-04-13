@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 import json
 import os
+import platform
 import re
 import sys
 import hashlib
@@ -888,6 +889,9 @@ class PromptArchitect:
         for size in [8, 9, 10, 11, 12, 14]:
             font_menu.add_command(label=str(size), command=lambda s=size: self._set_font_size(s))
         self._view_menu.add_cascade(label="Font Size", menu=font_menu)
+        self._view_menu.add_separator()
+        self._view_menu.add_command(label="Maximize Window", command=self._maximize_window, accelerator="F11")
+        self._view_menu.add_command(label="Restore Window Size", command=self._restore_window_size)
         menubar.add_cascade(label="View", menu=self._view_menu)
 
         self._help_menu = tk.Menu(menubar, tearoff=0, bg=c["surface"], fg=c["text"])
@@ -1082,6 +1086,7 @@ class PromptArchitect:
         )
         self.result_area.pack(fill=tk.BOTH, expand=True)
         self.result_area.bind("<<Modified>>", self._on_result_modified)
+        self.result_area.bind("<Control-a>", lambda e: (self._select_all_result(), "break")[-1])
 
         # Right-click context menu on result area
         self._result_ctx_menu = tk.Menu(self.root, tearoff=0, bg=c["surface"], fg=c["text"], font=("Segoe UI", 10))
@@ -1733,7 +1738,6 @@ class PromptArchitect:
         self.diag_area.pack(fill=tk.BOTH, expand=True)
 
     def _generate_diagnostic_report(self) -> str:
-        import platform as plat
         start = time.time()
         lines: list[str] = []
         sep = "=" * 70
@@ -1748,8 +1752,8 @@ class PromptArchitect:
         lines.append("")
 
         lines.append(f"{sep}\n  1. SYSTEM INFORMATION\n{sep}")
-        lines.append(f"  OS:              {plat.system()} {plat.release()} ({plat.version()})")
-        lines.append(f"  Architecture:    {plat.machine()}")
+        lines.append(f"  OS:              {platform.system()} {platform.release()} ({platform.version()})")
+        lines.append(f"  Architecture:    {platform.machine()}")
         lines.append(f"  Python:          {sys.version}")
         lines.append(f"  Tk Version:      {tk.TkVersion}")
         lines.append(f"  Working Dir:     {Path.cwd()}")
@@ -2782,8 +2786,19 @@ class PromptArchitect:
     def _save_geometry(self) -> None:
         try:
             CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            state = ""
+            try:
+                state = self.root.state()
+            except tk.TclError:
+                pass
+            if not state:
+                try:
+                    state = "zoomed" if self.root.attributes("-zoomed") else "normal"
+                except tk.TclError:
+                    pass
+            data = {"geometry": self.root.geometry(), "state": state}
             with open(GEOMETRY_FILE, "w", encoding="utf-8") as f:
-                json.dump({"geometry": self.root.geometry()}, f)
+                json.dump(data, f)
         except Exception:
             pass
 
@@ -2793,12 +2808,66 @@ class PromptArchitect:
                 with open(GEOMETRY_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 geo = data.get("geometry", "")
+                state = data.get("state", "")
                 if geo and re.match(r'\d+x\d+[+\-]\d+[+\-]\d+', geo):
                     self.root.geometry(geo)
-                    return
+                if state == "zoomed":
+                    self.root.after(0, self._maximize_window)
+                return
             except (OSError, json.JSONDecodeError, ValueError):
                 pass
+        # First launch — start maximized
         self.root.geometry("1150x960")
+        self.root.after(0, self._maximize_window)
+
+    def _maximize_window(self) -> None:
+        """Maximize the window cross-platform (zoomed on Windows, -zoomed on Linux/macOS)."""
+        try:
+            if platform.system() == "Windows":
+                self.root.state("zoomed")
+            else:
+                self.root.attributes("-zoomed", True)
+        except tk.TclError:
+            try:
+                w = self.root.winfo_screenwidth()
+                h = self.root.winfo_screenheight()
+                self.root.geometry(f"{w}x{h}+0+0")
+            except Exception:
+                pass
+        self._set_status("Window maximized")
+
+    def _restore_window_size(self) -> None:
+        """Restore the window from maximized to its normal size."""
+        try:
+            if platform.system() == "Windows":
+                self.root.state("normal")
+            else:
+                self.root.attributes("-zoomed", False)
+        except tk.TclError:
+            pass
+        self._set_status("Window restored")
+
+    def _toggle_maximize(self) -> None:
+        """Toggle between maximized and normal window state (F11)."""
+        system = platform.system()
+        try:
+            if system == "Windows":
+                if self.root.state() == "zoomed":
+                    self._restore_window_size()
+                else:
+                    self._maximize_window()
+            else:
+                currently_zoomed = False
+                try:
+                    currently_zoomed = bool(self.root.attributes("-zoomed"))
+                except tk.TclError:
+                    pass
+                if currently_zoomed:
+                    self._restore_window_size()
+                else:
+                    self._maximize_window()
+        except tk.TclError:
+            pass
 
     # ══════════════════════════════════════════════════════════════
     # SESSION MANAGEMENT
@@ -2867,6 +2936,8 @@ class PromptArchitect:
             "  Ctrl+T           Toggle dark/light theme\n"
             "  Ctrl+Z           Undo (in text fields)\n"
             "  Ctrl+Y           Redo (in text fields)\n"
+            "  Ctrl+A           Select all (in text fields)\n"
+            "  F11              Toggle maximize/restore window\n"
         )
         messagebox.showinfo("Keyboard Shortcuts", shortcuts)
 
@@ -2912,6 +2983,7 @@ class PromptArchitect:
         self.root.bind("<Control-t>", lambda e: self._toggle_theme())
         self.root.bind("<Control-z>", lambda e: self._undo())
         self.root.bind("<Control-y>", lambda e: self._redo())
+        self.root.bind("<F11>", lambda e: self._toggle_maximize())
 
         # Add right-click context menus to ALL text input widgets
         # This fixes mouse copy/paste which tkinter doesn't provide by default
@@ -2990,8 +3062,8 @@ class PromptArchitect:
         widget.bind("<Button-3>", lambda e: menu.tk_popup(e.x_root, e.y_root))
 
         # Make sure Ctrl+C/V/X/A work natively in this widget
-        widget.bind("<Control-c>", lambda e: do_copy())
-        widget.bind("<Control-x>", lambda e: do_cut())
+        widget.bind("<Control-c>", lambda e: (do_copy(), "break")[-1])
+        widget.bind("<Control-x>", lambda e: (do_cut(), "break")[-1])
         widget.bind("<Control-v>", lambda e: (do_paste(), "break")[-1])
         widget.bind("<Control-a>", lambda e: (do_select_all(), "break")[-1])
 
