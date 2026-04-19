@@ -1,0 +1,104 @@
+========================================================================
+  PROMPT ARCHITECT v5.0 -- PRESSURE TEST RESULTS
+  Generated: 2026-04-19 01:06:57
+  Pricing assumption: $3.0/M input tokens (Claude Sonnet)
+========================================================================
+
+SCENARIO: 1. Raw task, no enhancements
+  Tokens (est.):  ~154
+  Characters:     617
+  Words:          101
+  Sections:       3
+  Score:          18/104 (17%) -- Grade F
+  Cost/call:      $0.00046
+
+SCENARIO: 2. Full Code prompt (PC Desktop App + defaults)
+  Tokens (est.):  ~1,320
+  Characters:     5,280
+  Words:          790
+  Sections:       8
+  Score:          68/104 (65%) -- Grade B
+  Cost/call:      $0.00396
+
+SCENARIO: 3. Full + GBA ROM Hack project (full context)
+  Tokens (est.):  ~1,210
+  Characters:     4,841
+  Words:          717
+  Sections:       9
+  Score:          78/104 (75%) -- Grade B+
+  Cost/call:      $0.00363
+
+SCENARIO: 4. Full + GBA ROM Hack + Low Token Mode
+  Tokens (est.):  ~1,000
+  Characters:     4,000
+  Words:          594
+  Sections:       9
+  Score:          78/104 (75%) -- Grade B+
+  Cost/call:      $0.00300
+
+SCENARIO: 5. Conversation prompt (Expert + Professional)
+  Tokens (est.):  ~164
+  Characters:     658
+  Words:          97
+  Sections:       5
+  Score:          40/104 (38%) -- Grade D
+  Cost/call:      $0.00049
+
+SCENARIO: 6. Image prompt (Cinematic, all options)
+  Tokens (est.):  ~116
+  Characters:     467
+  Words:          63
+  Sections:       2
+  Score:          18/110 (16%) -- Grade F
+  Cost/call:      $0.00035
+
+------------------------------------------------------------------------
+  COMPARATIVE ANALYSIS
+------------------------------------------------------------------------
+
+Raw vs Engineered (Scenarios 1 -> 2):
+  Tokens:         154 -> 1,320 (8.6x)
+  Effectiveness:  17% -> 65% (+48 pts)
+  Verdict:        The engineered prompt is 48 points more effective at 8.6x the token cost. Well worth it for complex tasks.
+
+Low Token Mode impact (Scenarios 3 -> 4):
+  Tokens:         1,210 -> 1,000 (-210, -17.4%)
+  Effectiveness:  75% -> 75% (+0 pts)
+  Cost savings:   $0.00063 per call
+  Verdict:        GOOD tradeoff -- worth using for iterative work
+
+------------------------------------------------------------------------
+  REAL-WORLD PROJECTIONS
+------------------------------------------------------------------------
+
+At 50 prompts/day, 22 days/month:
+  Scenario 3 (full context):  $3.99/mo
+  Scenario 4 (low-token):     $3.30/mo
+  Savings:                     $0.69/mo (17.4%)
+
+Time saved (typing-avoidance):
+  Convention blocks auto-injected: 6 per prompt
+  Est. time saved per prompt:      ~180s
+  Daily at 50 prompts/day:      ~150.0 min
+  Annual (250 work days):           ~625 hours
+
+------------------------------------------------------------------------
+  PERSONALIZATION (auto-discovery)
+------------------------------------------------------------------------
+
+  Projects auto-discovered:  32
+  Built-in projects:         6
+  Total available:           38
+  Verdict: Strong -- tool adapts to your actual workflow.
+
+========================================================================
+  FINAL VERDICT
+========================================================================
+
+  [PASS]  Effectiveness gain > 30 pts? +48 pts
+  [PASS]  Low-token saves >= 15% with <= 10pt loss? 17.4% / 0 pt loss
+  [PASS]  Auto-discovery finds >= 10 projects? 32 found
+
+  Overall: YES -- use this tool. All criteria met.
+
+========================================================================

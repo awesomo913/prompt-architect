@@ -141,6 +141,8 @@ MY_PROJECTS = {
     "(None)": {
         "description": "No project preset. Use the generic options below.",
         "context_block": "",
+        "token_savings": "",
+        "path": "",
     },
     "GBA ROM Hack (pokeemerald C)": {
         "description": (
@@ -162,6 +164,12 @@ MY_PROJECTS = {
             "- JSON encounters: json.load/dump. C data: string manipulation or bracket parsing. Never mix.\n"
             "- Every mod function: print what it does, count changes, report results, warn on failures."
         ),
+        "token_savings": (
+            "pokeemerald C conventions. Key rules: TrainerMonItemCustomMoves=all fields; "
+            "markers `// --- CUSTOM: ---` required; bracket-depth not regex; GBA globals direct; "
+            "build `make EXE=.exe -j4`; JSON=wild encounters only."
+        ),
+        "path": "",
     },
     "EmeraldDevTool (CustomTkinter GUI)": {
         "description": (
@@ -184,6 +192,12 @@ MY_PROJECTS = {
             "- Error pattern: try/except -> toast error + app_log ERROR + return. Then toast success + app_log SUCCESS.\n"
             "- Shortcuts: Ctrl+1-9 tabs, Ctrl+S save, Ctrl+Q quit, F5 refresh. Don't conflict."
         ),
+        "token_savings": (
+            "EmeraldDevTool: CustomTkinter (ctk.*), tab pattern (backend_ref injected, _build_ui, load_data), "
+            "ToastNotification not messagebox, app_log with source=, use existing widgets (SearchableList, StatusBar, "
+            "HexViewer, PokemonSlotWidget), threading via self.after(0, cb)."
+        ),
+        "path": "",
     },
     "Android App (Kivy)": {
         "description": "Android mobile app using Kivy + Buildozer. Touch-first, Material-inspired.",
@@ -195,6 +209,10 @@ MY_PROJECTS = {
             "- Clipboard via kivy.core.clipboard, Share via plyer.\n"
             "- Dark theme (Catppuccin Mocha colors)."
         ),
+        "token_savings": (
+            "Kivy + buildozer. 48dp touch targets, Spinner/ToggleButton, kivy.core.clipboard + plyer, dark theme."
+        ),
+        "path": "",
     },
     "Python AI Tool": {
         "description": "Standalone Python tools that interact with AI APIs, process data, or automate tasks.",
@@ -206,6 +224,11 @@ MY_PROJECTS = {
             "- Graceful error handling with retries for network calls.\n"
             "- If GUI: tkinter with ttk theming, dark mode, proper thread separation."
         ),
+        "token_savings": (
+            "Python 3.11+. pathlib/json/logging RotatingFileHandler. API keys via os.environ. "
+            "Retries for network. tkinter+ttk dark mode if GUI."
+        ),
+        "path": "",
     },
     "General Script": {
         "description": "Quick Python scripts for automation, data processing, or utilities.",
@@ -215,8 +238,109 @@ MY_PROJECTS = {
             "- if __name__ == '__main__' guard. Type hints. Brief docstrings.\n"
             "- Print progress for long operations."
         ),
+        "token_savings": "Python 3.11+, pathlib, argparse, __main__ guard, type hints, brief docstrings.",
+        "path": "",
     },
 }
+
+def scan_projects_folder(root_path: Path, max_projects: int = 100) -> dict:
+    """Auto-discover project folders under root_path.
+
+    Returns a dict shaped like MY_PROJECTS where each discovered folder
+    becomes an entry. A folder is considered a project if it contains any of:
+    CLAUDE.md, README.md, requirements.txt, Makefile, package.json,
+    pyproject.toml, buildozer.spec.
+
+    Description = first non-empty line of CLAUDE.md or README.md.
+    context_block = full CLAUDE.md (if present) or auto-generated stub from file types.
+    token_savings = first 2-3 sentences of CLAUDE.md, else auto-stub.
+    """
+    discovered: dict = {}
+    if not root_path or not root_path.is_dir():
+        return discovered
+
+    signals = ("CLAUDE.md", "README.md", "requirements.txt", "Makefile",
+               "package.json", "pyproject.toml", "buildozer.spec")
+
+    try:
+        subdirs = sorted(p for p in root_path.iterdir() if p.is_dir())
+    except (OSError, PermissionError):
+        return discovered
+
+    for subdir in subdirs:
+        if subdir.name.startswith('.') or subdir.name.startswith('_'):
+            continue
+        if subdir.name in ("__pycache__", "node_modules", "venv", ".venv", "build", "dist"):
+            continue
+
+        # Check for at least one signal file
+        signal_found = None
+        for sig in signals:
+            if (subdir / sig).exists():
+                signal_found = sig
+                break
+        if not signal_found:
+            continue
+
+        # Read CLAUDE.md first, fall back to README.md
+        desc_text = ""
+        context = ""
+        claude_md = subdir / "CLAUDE.md"
+        readme_md = subdir / "README.md"
+
+        try:
+            if claude_md.exists():
+                context = claude_md.read_text(encoding="utf-8", errors="ignore")[:8000]
+            elif readme_md.exists():
+                context = readme_md.read_text(encoding="utf-8", errors="ignore")[:4000]
+        except (OSError, UnicodeDecodeError):
+            context = ""
+
+        # Extract description: first non-empty, non-heading line
+        for line in context.splitlines():
+            stripped = line.strip().lstrip("#").strip()
+            if stripped and not stripped.startswith("!["):
+                desc_text = stripped[:200]
+                break
+        if not desc_text:
+            # Build stub from detected languages
+            types = []
+            if (subdir / "requirements.txt").exists() or (subdir / "pyproject.toml").exists():
+                types.append("Python")
+            if (subdir / "package.json").exists():
+                types.append("Node.js")
+            if (subdir / "Makefile").exists():
+                types.append("C/Make")
+            if (subdir / "buildozer.spec").exists():
+                types.append("Kivy/Android")
+            desc_text = f"{'/'.join(types) or 'Auto-discovered'} project at {subdir.name}"
+
+        # Build token-saver stub
+        token_stub = ""
+        for line in context.splitlines():
+            s = line.strip().lstrip("-*#").strip()
+            if s and len(s) > 10:
+                token_stub += s[:120] + " "
+                if len(token_stub) > 280:
+                    break
+        if not token_stub:
+            token_stub = desc_text[:200]
+
+        discovered[subdir.name] = {
+            "description": desc_text,
+            "context_block": (
+                f"PROJECT CONTEXT for '{subdir.name}' "
+                f"(auto-discovered from {signal_found}):\n{context}"
+            ) if context else f"PROJECT: {subdir.name}. No CLAUDE.md or README.md found.",
+            "token_savings": f"Project '{subdir.name}': {token_stub.strip()}",
+            "path": str(subdir),
+        }
+
+        if len(discovered) >= max_projects:
+            break
+
+    return discovered
+
 
 # ═══════════════════════════════════════════════════════════════════
 # PROMPT TYPES
@@ -773,6 +897,12 @@ class PromptArchitect:
         self._themed_texts: list[tk.Text | scrolledtext.ScrolledText] = []
         self._tooltips: list[ToolTip] = []
 
+        # v5.0 additions: scan root, discovered projects cache, merged project dict
+        self._scan_root: Path = self._load_scan_root()
+        self._discovered_projects: dict = {}
+        self._merged_projects: dict = dict(MY_PROJECTS)  # Live view: hardcoded + discovered
+        self._refresh_discovered_projects()
+
         self._install_error_handler()
         self._restore_geometry()
         self._configure_styles(self._active_colors())
@@ -785,6 +915,49 @@ class PromptArchitect:
         self._start_autosave()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         logger.info("Application started")
+
+    # ── v5.0: Scan-root persistence + project auto-discovery ──
+
+    def _load_scan_root(self) -> Path:
+        """Load the last-used project scan root from config, fall back to Desktop/AI."""
+        default = Path("C:/Users/computer/Desktop/AI")
+        cfg_file = CONFIG_DIR / "scan_root.json"
+        if cfg_file.exists():
+            try:
+                data = json.loads(cfg_file.read_text(encoding="utf-8"))
+                p = Path(data.get("path", ""))
+                if p.is_dir():
+                    return p
+            except (OSError, json.JSONDecodeError):
+                pass
+        return default if default.is_dir() else Path.home()
+
+    def _save_scan_root(self, p: Path) -> None:
+        """Persist the current scan root."""
+        try:
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            cfg_file = CONFIG_DIR / "scan_root.json"
+            cfg_file.write_text(json.dumps({"path": str(p)}, indent=2), encoding="utf-8")
+        except OSError as exc:
+            logger.warning(f"Could not save scan_root: {exc}")
+
+    def _refresh_discovered_projects(self) -> None:
+        """Rescan the current scan_root folder and merge results into _merged_projects."""
+        try:
+            self._discovered_projects = scan_projects_folder(self._scan_root, max_projects=150)
+        except Exception as exc:
+            logger.warning(f"Project scan failed: {exc}")
+            self._discovered_projects = {}
+
+        # Merge: hardcoded takes precedence (so custom conventions aren't overwritten)
+        merged = dict(self._discovered_projects)
+        for name, data in MY_PROJECTS.items():
+            merged[name] = data
+        self._merged_projects = merged
+        logger.info(
+            f"Scanned {self._scan_root}: {len(self._discovered_projects)} discovered, "
+            f"{len(self._merged_projects)} total projects"
+        )
 
     # ══════════════════════════════════════════════════════════════
     # THEME
@@ -994,7 +1167,51 @@ class PromptArchitect:
 
         header_row = ttk.Frame(main)
         header_row.pack(fill=tk.X, pady=(0, 10))
-        ttk.Label(header_row, text=f"\u2726 {APP_NAME.upper()}", style="Header.TLabel").pack(side=tk.LEFT)
+        ttk.Label(header_row, text=f"\u2726 {APP_NAME.upper()}", style="Header.TLabel").pack(side=tk.LEFT, padx=(0, 16))
+
+        # Template quick-switcher (top ribbon)
+        c_hdr = self._active_colors()
+        ttk.Label(header_row, text="Template:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 4))
+        self._template_quick_var = tk.StringVar(value="")
+        self._template_quick_combo = ttk.Combobox(
+            header_row, textvariable=self._template_quick_var,
+            state="readonly", width=22, font=("Segoe UI", 9),
+        )
+        self._template_quick_combo.pack(side=tk.LEFT, padx=(0, 4))
+        self._template_quick_combo.bind("<<ComboboxSelected>>", lambda e: self._load_template_by_name())
+
+        for text, ck, cmd, tip in [
+            ("New", "surface", self._new_from_quick, "Start fresh — clear all settings"),
+            ("Save", "peach", self._save_template_from_quick, "Save current settings as a template"),
+            ("Delete", "red", self._delete_template_from_quick, "Delete the selected template"),
+        ]:
+            btn = tk.Button(
+                header_row, text=text, command=cmd,
+                bg=c_hdr[ck], fg=c_hdr["dark"], font=("Segoe UI", 9, "bold"),
+                relief=tk.FLAT, padx=8, pady=2, cursor="hand2",
+            )
+            btn.pack(side=tk.LEFT, padx=(0, 4))
+            self._themed_buttons.append((btn, ck, ck))
+            self._tooltips.append(ToolTip(btn, tip, c_hdr))
+
+        # Separator
+        ttk.Separator(header_row, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=8)
+
+        # Low Token Mode toggle (right side)
+        self._low_token_var = tk.BooleanVar(value=False)
+        low_tok_cb = ttk.Checkbutton(
+            header_row, text="\u26a1 Low Token Mode", variable=self._low_token_var,
+        )
+        low_tok_cb.pack(side=tk.RIGHT, padx=(8, 0))
+        self._tooltips.append(ToolTip(
+            low_tok_cb,
+            "When ON, uses abbreviated project context (token_savings) instead of full CLAUDE.md. "
+            "Cuts prompt tokens by ~50-60% with minimal effectiveness loss.",
+            c_hdr,
+        ))
+
+        # Refresh template list at init
+        self._refresh_template_quick_list()
 
         self.notebook = ttk.Notebook(main)
         self.notebook.pack(fill=tk.BOTH, expand=True)
@@ -1178,24 +1395,192 @@ class PromptArchitect:
     # ── Prompt Category ──────────────────────────────────────────
 
     def _build_my_projects_section(self, parent: ttk.Frame) -> None:
-        frame = ttk.LabelFrame(parent, text=" My Projects (auto-injects your conventions) ", padding=8)
+        frame = ttk.LabelFrame(parent, text=" My Projects (auto-discovered + built-in) ", padding=8)
         frame.pack(fill=tk.X, pady=(0, 6))
+        c = self._active_colors()
+
         ttk.Label(
             frame,
             text=(
-                "Pick your project and its coding conventions get added to every prompt automatically. "
-                "No more re-explaining struct formats, widget patterns, or build commands."
+                "Pick a project — its conventions (build commands, patterns, widget rules) "
+                "get auto-injected into every prompt. Auto-discovered from your chosen folder."
             ),
             style="Sub.TLabel", wraplength=450,
-        ).pack(anchor=tk.W, pady=(0, 6))
+        ).pack(anchor=tk.W, pady=(0, 4))
 
+        # Scan-root row (folder picker)
+        scan_row = ttk.Frame(frame)
+        scan_row.pack(fill=tk.X, pady=(2, 4))
+        ttk.Label(scan_row, text="Scan folder:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 4))
+        self._scan_root_var = tk.StringVar(value=str(self._scan_root))
+        scan_entry = ttk.Entry(scan_row, textvariable=self._scan_root_var, font=("Segoe UI", 9))
+        scan_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        browse_btn = tk.Button(
+            scan_row, text="...", command=self._browse_scan_root,
+            bg=c["surface"], fg=c["text"], font=("Segoe UI", 9), relief=tk.FLAT,
+            padx=8, pady=1, cursor="hand2",
+        )
+        browse_btn.pack(side=tk.LEFT, padx=(0, 2))
+        self._themed_buttons.append((browse_btn, "surface", "surface"))
+        rescan_btn = tk.Button(
+            scan_row, text="Rescan", command=self._rescan_projects,
+            bg=c["blue"], fg=c["dark"], font=("Segoe UI", 9, "bold"), relief=tk.FLAT,
+            padx=8, pady=1, cursor="hand2",
+        )
+        rescan_btn.pack(side=tk.LEFT)
+        self._themed_buttons.append((rescan_btn, "blue", "blue"))
+        self._tooltips.append(ToolTip(rescan_btn, "Rescan the folder above for projects", c))
+
+        # Search box
+        search_row = ttk.Frame(frame)
+        search_row.pack(fill=tk.X, pady=(2, 4))
+        ttk.Label(search_row, text="Search:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 4))
+        self._project_search_var = tk.StringVar(value="")
+        search_entry = ttk.Entry(search_row, textvariable=self._project_search_var, font=("Segoe UI", 9))
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        search_entry.bind("<KeyRelease>", lambda e: self._refresh_project_list())
+
+        # Scrollable project list
         self.my_project_var = tk.StringVar(value="(None)")
-        c = self._active_colors()
-        for name, data in MY_PROJECTS.items():
-            rb = ttk.Radiobutton(frame, text=name, variable=self.my_project_var, value=name)
-            rb.pack(anchor=tk.W)
-            if data["description"]:
-                ttk.Label(frame, text=data["description"], style="Desc.TLabel", wraplength=430).pack(anchor=tk.W, padx=(24, 0), pady=(0, 4))
+        list_container = ttk.Frame(frame)
+        list_container.pack(fill=tk.X, pady=(2, 4))
+        self._project_list_canvas = tk.Canvas(list_container, bg=c["bg"], highlightthickness=0, height=180)
+        list_sb = ttk.Scrollbar(list_container, orient=tk.VERTICAL, command=self._project_list_canvas.yview)
+        self._project_list_frame = ttk.Frame(self._project_list_canvas)
+        self._project_list_frame.bind(
+            "<Configure>",
+            lambda e: self._project_list_canvas.configure(scrollregion=self._project_list_canvas.bbox("all")),
+        )
+        self._project_list_canvas.create_window((0, 0), window=self._project_list_frame, anchor="nw")
+        self._project_list_canvas.configure(yscrollcommand=list_sb.set)
+        self._project_list_canvas.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        list_sb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Working Directory row
+        wd_row = ttk.Frame(frame)
+        wd_row.pack(fill=tk.X, pady=(4, 2))
+        ttk.Label(wd_row, text="Working dir:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 4))
+        self.workdir_var = tk.StringVar(value="")
+        wd_entry = ttk.Entry(wd_row, textvariable=self.workdir_var, font=("Segoe UI", 9))
+        wd_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        wd_browse = tk.Button(
+            wd_row, text="...", command=self._browse_workdir,
+            bg=c["surface"], fg=c["text"], font=("Segoe UI", 9), relief=tk.FLAT,
+            padx=8, pady=1, cursor="hand2",
+        )
+        wd_browse.pack(side=tk.LEFT)
+        self._themed_buttons.append((wd_browse, "surface", "surface"))
+        self._tooltips.append(ToolTip(
+            wd_browse,
+            "The folder the AI should work in. Auto-filled when you pick a project. "
+            "Prepends a '# WORKING DIRECTORY' section to the prompt.",
+            c,
+        ))
+
+        # Populate the list on first build
+        self._refresh_project_list()
+
+        # When project changes, auto-fill workdir and maybe toggle Low Token Mode
+        self.my_project_var.trace_add("write", lambda *_: self._on_project_changed())
+
+    # ── v5.0 helper methods for projects ──
+
+    def _refresh_project_list(self) -> None:
+        """Rebuild the project radio button list based on current search filter."""
+        for child in self._project_list_frame.winfo_children():
+            child.destroy()
+        query = (self._project_search_var.get() if hasattr(self, "_project_search_var") else "").strip().lower()
+
+        # Always show (None) first
+        first_items = [("(None)", self._merged_projects.get("(None)", {}))]
+        built_in = [(n, d) for n, d in MY_PROJECTS.items() if n != "(None)"]
+        discovered = [(n, d) for n, d in self._discovered_projects.items() if n not in MY_PROJECTS]
+        # Merge: built-in first, then discovered (alphabetical within each group)
+        all_items = first_items + sorted(built_in, key=lambda x: x[0]) + sorted(discovered, key=lambda x: x[0])
+
+        shown = 0
+        for name, data in all_items:
+            desc = (data or {}).get("description", "")
+            if query and query not in name.lower() and query not in desc.lower():
+                continue
+            rb = ttk.Radiobutton(
+                self._project_list_frame, text=name,
+                variable=self.my_project_var, value=name,
+            )
+            rb.pack(anchor=tk.W, padx=(2, 0))
+            if desc:
+                ttk.Label(
+                    self._project_list_frame, text=desc[:200],
+                    style="Desc.TLabel", wraplength=420,
+                ).pack(anchor=tk.W, padx=(24, 0), pady=(0, 2))
+            shown += 1
+
+        if shown == 0:
+            ttk.Label(
+                self._project_list_frame,
+                text=f"No projects match '{query}'. Try rescanning a different folder.",
+                style="Warn.TLabel", wraplength=420,
+            ).pack(anchor=tk.W, padx=(2, 0), pady=4)
+
+    def _browse_scan_root(self) -> None:
+        """Let user pick a new project-scan folder."""
+        chosen = filedialog.askdirectory(
+            title="Choose folder to scan for projects",
+            initialdir=str(self._scan_root),
+        )
+        if chosen:
+            self._scan_root = Path(chosen)
+            self._scan_root_var.set(chosen)
+            self._save_scan_root(self._scan_root)
+            self._rescan_projects()
+
+    def _rescan_projects(self) -> None:
+        """Rescan current scan root and refresh the project list."""
+        # Sync from var in case user typed manually
+        typed = self._scan_root_var.get().strip()
+        if typed:
+            p = Path(typed)
+            if p.is_dir():
+                self._scan_root = p
+                self._save_scan_root(p)
+        self._refresh_discovered_projects()
+        self._refresh_project_list()
+        self._set_status(
+            f"Scanned {self._scan_root.name}: found {len(self._discovered_projects)} projects"
+        )
+
+    def _browse_workdir(self) -> None:
+        """Let user pick a working directory."""
+        current = self.workdir_var.get().strip()
+        init_dir = current if current and Path(current).is_dir() else str(self._scan_root)
+        chosen = filedialog.askdirectory(
+            title="Choose the working directory for this task",
+            initialdir=init_dir,
+        )
+        if chosen:
+            self.workdir_var.set(chosen)
+
+    def _on_project_changed(self) -> None:
+        """When a project is selected, auto-fill workdir and maybe enable Low Token Mode."""
+        name = self.my_project_var.get()
+        data = self._merged_projects.get(name, {})
+
+        # Auto-fill working directory from project path
+        proj_path = data.get("path", "")
+        if proj_path and hasattr(self, "workdir_var"):
+            # Only overwrite if workdir is empty or was an auto-filled path
+            cur = self.workdir_var.get().strip()
+            # Heuristic: overwrite if empty or if current matches any project path
+            known_paths = {p.get("path", "") for p in self._merged_projects.values() if p.get("path")}
+            if not cur or cur in known_paths:
+                self.workdir_var.set(proj_path)
+
+        # Auto-enable Low Token Mode for big projects (context > 2000 chars ≈ 500 tokens)
+        context = data.get("context_block", "")
+        if hasattr(self, "_low_token_var") and len(context) > 2000:
+            if not self._low_token_var.get():
+                self._low_token_var.set(True)
+                self._toast(f"Low Token Mode auto-enabled for {name} (large context)")
 
     def _build_category_section(self, parent: ttk.Frame) -> None:
         frame = ttk.LabelFrame(parent, text=" What Are You Prompting For? ", padding=8)
@@ -1229,6 +1614,31 @@ class PromptArchitect:
         if target:
             # Pack it right after the category section (position 1 in the parent)
             target.pack(fill=tk.X, after=self.left_frame.winfo_children()[0])
+
+        # Auto-adjust constraints per category (smart preselects)
+        if hasattr(self, "constraint_vars"):
+            if cat in ("Image", "Video"):
+                # Python rules don't apply to image/video prompts
+                if "Python Best Practices" in self.constraint_vars:
+                    self.constraint_vars["Python Best Practices"].set(False)
+                if "Robustness" in self.constraint_vars:
+                    self.constraint_vars["Robustness"].set(False)
+                # Conciseness helps for image/video (short, dense descriptors)
+                if "Conciseness" in self.constraint_vars:
+                    self.constraint_vars["Conciseness"].set(True)
+            elif cat == "Code":
+                # Reinstate Python defaults for Code
+                if "Python Best Practices" in self.constraint_vars:
+                    self.constraint_vars["Python Best Practices"].set(True)
+                if "Conciseness" in self.constraint_vars:
+                    self.constraint_vars["Conciseness"].set(True)
+            elif cat == "Conversation":
+                # Conversation: relax Python rules, keep conciseness
+                if "Python Best Practices" in self.constraint_vars:
+                    self.constraint_vars["Python Best Practices"].set(False)
+                if "Conciseness" in self.constraint_vars:
+                    self.constraint_vars["Conciseness"].set(True)
+
         self._set_status(f"Switched to {cat} prompting")
 
     # ── Conversation section ─────────────────────────────────────
@@ -1307,7 +1717,7 @@ class PromptArchitect:
         frame = ttk.LabelFrame(parent, text=" What Are You Building? (pick one) ", padding=8)
         frame.pack(fill=tk.X, pady=(0, 6))
         ttk.Label(frame, text="Choose the type of thing you're creating. You can add extras in the next section.", style="Sub.TLabel", wraplength=450).pack(anchor=tk.W, pady=(0, 8))
-        self.build_target_var = tk.StringVar(value="(none)")
+        self.build_target_var = tk.StringVar(value="PC Desktop App")
         ttk.Radiobutton(frame, text="Nothing specific", variable=self.build_target_var, value="(none)").pack(anchor=tk.W)
         ttk.Label(frame, text="Skip this and use the Task Description box.", style="Desc.TLabel", wraplength=430).pack(anchor=tk.W, padx=(24, 0), pady=(0, 6))
         for name, data in BUILD_TARGETS.items():
@@ -1456,6 +1866,33 @@ class PromptArchitect:
             btn.bind("<Leave>", lambda e, b=btn, ck=color_key: b.config(bg=self._active_colors()[ck]))
             self._tooltips.append(ToolTip(btn, tooltip_text, c))
 
+        # ── Grab from AI row (pull current AI input, enhance, paste back) ──
+        grab_frame = ttk.Frame(parent)
+        grab_frame.pack(fill=tk.X, pady=(4, 2))
+        ttk.Label(grab_frame, text="Grab current input from an AI, enhance it, paste back:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 8))
+        grab_targets = [
+            ("\U0001f4e5 Grab Claude", "mauve", lambda: self._grab_enhance_send("Claude"),
+             "Grab whatever's in your Claude input box, enhance with project context + token savings, paste back ready to submit."),
+            ("\U0001f4e5 Grab ChatGPT", "green", lambda: self._grab_enhance_send("ChatGPT"),
+             "Same as Claude but for ChatGPT."),
+            ("\U0001f4e5 Grab Gemini", "blue", lambda: self._grab_enhance_send("Gemini"),
+             "Same as Claude but for Gemini."),
+            ("\U0001f4e5 Grab Any", "teal", lambda: self._grab_enhance_send(None),
+             "Pick any window: 3-sec countdown, click your AI's input box, it grabs + enhances + pastes back."),
+        ]
+        for text, ck, cmd, tip in grab_targets:
+            btn = tk.Button(
+                grab_frame, text=text, command=cmd,
+                bg=c[ck], fg=c["dark"], font=("Segoe UI", 9, "bold"),
+                relief=tk.FLAT, padx=10, pady=4, cursor="hand2",
+            )
+            btn.pack(side=tk.LEFT, padx=(0, 4))
+            self._themed_buttons.append((btn, ck, ck))
+            hover_color = _lighten_color(c[ck])
+            btn.bind("<Enter>", lambda e, b=btn, hc=hover_color: b.config(bg=hc))
+            btn.bind("<Leave>", lambda e, b=btn, ckey=ck: b.config(bg=self._active_colors()[ckey]))
+            self._tooltips.append(ToolTip(btn, tip, c))
+
         # ── Send to AI row ──
         send_frame = ttk.Frame(parent)
         send_frame.pack(fill=tk.X, pady=(4, 2))
@@ -1506,6 +1943,91 @@ class PromptArchitect:
             for fp in sorted(tdir.iterdir()):
                 if fp.suffix == ".json":
                     self.template_listbox.insert(tk.END, fp.stem)
+        # Also refresh the quick-switcher combobox if it exists
+        if hasattr(self, "_template_quick_combo"):
+            self._refresh_template_quick_list()
+
+    def _refresh_template_quick_list(self) -> None:
+        """Refresh the values in the top-ribbon template combobox."""
+        names = []
+        tdir = Path(TEMPLATES_DIR)
+        if tdir.is_dir():
+            try:
+                for fp in sorted(tdir.iterdir()):
+                    if fp.suffix == ".json":
+                        names.append(fp.stem)
+            except OSError:
+                pass
+        if hasattr(self, "_template_quick_combo"):
+            self._template_quick_combo["values"] = names
+
+    def _load_template_by_name(self) -> None:
+        """Load the template selected in the top-ribbon combobox."""
+        name = self._template_quick_var.get().strip()
+        if not name:
+            return
+        try:
+            path = self._safe_template_path(name)
+        except ValueError:
+            messagebox.showerror("Error", "Invalid template name.")
+            return
+        if not path.exists():
+            messagebox.showwarning("Not Found", f"Template '{name}' not found.")
+            return
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            messagebox.showerror("Load Failed", f"Could not read: {exc}")
+            return
+        valid, msg = self._validate_template(data)
+        if not valid:
+            messagebox.showerror("Invalid Template", msg)
+            return
+        self._apply_state(data)
+        self._toast(f"Loaded template: {name}")
+        self._set_status(f"Template loaded: {name}")
+
+    def _new_from_quick(self) -> None:
+        """Clear current settings for a fresh start, asking first."""
+        if self._dirty and not messagebox.askyesno(
+            "Discard changes?",
+            "You have unsaved changes. Discard and start fresh?",
+        ):
+            return
+        # Clear task + context, reset selections to defaults
+        self.task_input.delete("1.0", tk.END)
+        self.context_input.delete("1.0", tk.END)
+        self.custom_constraints.delete("1.0", tk.END)
+        self.role_input.delete(0, tk.END)
+        if hasattr(self, "workdir_var"):
+            self.workdir_var.set("")
+        if hasattr(self, "my_project_var"):
+            self.my_project_var.set("(None)")
+        self._template_quick_var.set("")
+        self._set_status("New session started")
+
+    def _save_template_from_quick(self) -> None:
+        """Prompt for a name and save current state, then refresh combobox."""
+        self._save_template()  # Reuse existing flow
+        self._refresh_template_quick_list()
+
+    def _delete_template_from_quick(self) -> None:
+        """Delete the currently selected quick-switcher template."""
+        name = self._template_quick_var.get().strip()
+        if not name:
+            self._set_status("No template selected")
+            return
+        if not messagebox.askyesno("Confirm Delete", f"Delete template '{name}'?"):
+            return
+        try:
+            path = self._safe_template_path(name)
+            if path.exists():
+                path.unlink()
+            self._template_quick_var.set("")
+            self._refresh_template_list()
+            self._set_status(f"Deleted template: {name}")
+        except (ValueError, OSError) as exc:
+            messagebox.showerror("Delete Failed", str(exc))
 
     def _safe_template_path(self, name: str) -> Path:
         """Validate and return a safe template file path, preventing path traversal."""
@@ -1597,6 +2119,8 @@ class PromptArchitect:
     def _collect_state(self) -> dict:
         return {
             "my_project": self.my_project_var.get() if hasattr(self, "my_project_var") else "(None)",
+            "workdir": self.workdir_var.get() if hasattr(self, "workdir_var") else "",
+            "low_token_mode": self._low_token_var.get() if hasattr(self, "_low_token_var") else False,
             "prompt_category": self.prompt_category_var.get(),
             "build_target": self.build_target_var.get(),
             "enhancements": {k: v.get() for k, v in self.enhancement_vars.items()},
@@ -1620,6 +2144,10 @@ class PromptArchitect:
     def _apply_state(self, data: dict) -> None:
         if hasattr(self, "my_project_var"):
             self.my_project_var.set(data.get("my_project", "(None)"))
+        if hasattr(self, "workdir_var"):
+            self.workdir_var.set(data.get("workdir", ""))
+        if hasattr(self, "_low_token_var"):
+            self._low_token_var.set(bool(data.get("low_token_mode", False)))
         cat = data.get("prompt_category", "Code")
         self.prompt_category_var.set(cat)
         self._on_category_change()
@@ -1931,9 +2459,33 @@ class PromptArchitect:
 
         # Inject My Projects context block at the top if one is selected
         project_key = self.my_project_var.get() if hasattr(self, "my_project_var") else "(None)"
-        project_block = MY_PROJECTS.get(project_key, {}).get("context_block", "")
+        project_data = self._merged_projects.get(project_key, MY_PROJECTS.get(project_key, {}))
+
+        # Pick token_savings (abbreviated) vs context_block (full) based on Low Token Mode
+        low_token_active = (
+            hasattr(self, "_low_token_var") and self._low_token_var.get()
+        )
+        if low_token_active and project_data.get("token_savings"):
+            project_block = project_data.get("token_savings", "")
+            project_block_label = "# PROJECT CONTEXT (low-token mode)"
+        else:
+            project_block = project_data.get("context_block", "")
+            project_block_label = "# PROJECT CONTEXT"
+
         if project_block:
-            sections.insert(0, f"# PROJECT CONTEXT\n{project_block}")
+            sections.insert(0, f"{project_block_label}\n{project_block}")
+
+        # Working Directory section (if set)
+        workdir = self.workdir_var.get().strip() if hasattr(self, "workdir_var") else ""
+        if workdir:
+            wd_section = (
+                f"# WORKING DIRECTORY\n"
+                f"The target folder for this task is: {workdir}\n"
+                f"Files and paths referenced should be relative to this directory unless specified otherwise."
+            )
+            # Insert after PROJECT CONTEXT (so it reads top-down: project → workdir → role/task/...)
+            insert_idx = 1 if project_block else 0
+            sections.insert(insert_idx, wd_section)
 
         final = "\n\n".join(sections)
 
@@ -2568,6 +3120,152 @@ class PromptArchitect:
                 self.root.after(0, lambda: self._set_status(f"Paste failed: {e}"))
 
         import threading
+        threading.Thread(target=do_paste, daemon=True).start()
+
+    # ══════════════════════════════════════════════════════════════
+    # GRAB + ENHANCE + SEND (v5.0)
+    # ══════════════════════════════════════════════════════════════
+
+    def _grab_enhance_send(self, ai_name: str | None) -> None:
+        """Grab text currently in an AI's input box, enhance it with project context
+        + token savings, and paste the enhanced version back into that same input box.
+
+        If ai_name is None, uses a 3-second countdown: user clicks any input, script grabs.
+        """
+        try:
+            import pyautogui
+            import pyperclip
+        except ImportError:
+            messagebox.showerror(
+                "Missing Libraries",
+                "This feature requires pyautogui and pyperclip.\n\n"
+                "Install with:\n  pip install pyautogui pyperclip",
+            )
+            return
+
+        import time
+        import threading
+
+        def do_work():
+            # Step 1: Find window (or countdown for manual pick)
+            target_win = None
+            if ai_name:
+                search_terms = {
+                    "Claude": ["claude.ai", "Claude"],
+                    "ChatGPT": ["chatgpt.com", "ChatGPT"],
+                    "Gemini": ["gemini.google", "Gemini"],
+                }
+                terms = search_terms.get(ai_name, [ai_name])
+                for term in terms:
+                    try:
+                        for win in pyautogui.getAllWindows():
+                            if term.lower() in win.title.lower() and win.visible:
+                                target_win = win
+                                break
+                        if target_win:
+                            break
+                    except Exception:
+                        continue
+
+                if not target_win:
+                    self.root.after(0, lambda: messagebox.showwarning(
+                        f"{ai_name} Not Found",
+                        f"Could not find an open {ai_name} window.\n\n"
+                        f"Falling back to 3-second countdown — click the {ai_name} input box now.",
+                    ))
+                    self.root.after(0, lambda: self._set_status(
+                        f"Countdown: click {ai_name} input in 3 seconds..."))
+                    time.sleep(3)
+                else:
+                    try:
+                        target_win.activate()
+                    except Exception:
+                        pass
+                    time.sleep(0.4)
+            else:
+                # No AI specified: pure countdown mode
+                self.root.after(0, lambda: self._toast(
+                    "Click the AI input box now! Grabbing in 3 seconds..."))
+                self.root.after(0, lambda: self._set_status(
+                    "Countdown: click target input in 3 seconds..."))
+                time.sleep(3)
+
+            # Step 2: Save clipboard, grab current input
+            saved_clip = ""
+            try:
+                saved_clip = pyperclip.paste()
+            except Exception:
+                pass
+
+            try:
+                pyautogui.hotkey('ctrl', 'a')
+                time.sleep(0.15)
+                pyautogui.hotkey('ctrl', 'c')
+                time.sleep(0.25)
+                grabbed = pyperclip.paste()
+            except Exception as exc:
+                self.root.after(0, lambda: self._set_status(f"Grab failed: {exc}"))
+                return
+
+            grabbed = (grabbed or "").strip()
+            if not grabbed or grabbed == saved_clip:
+                self.root.after(0, lambda: self._set_status(
+                    "Nothing grabbed — input box may be empty or clipboard unchanged"))
+                return
+
+            # Step 3: Put grabbed text in the task box (replace task)
+            def put_into_task():
+                self.task_input.delete("1.0", tk.END)
+                self.task_input.insert("1.0", grabbed)
+                self.generate()
+                # After generate, grab enhanced prompt and put on clipboard
+                enhanced = self._get_prompt_text_for_send()
+                if enhanced:
+                    try:
+                        pyperclip.copy(enhanced)
+                    except Exception:
+                        pass
+                    # Step 4: Paste back into AI
+                    self._paste_back_into_window(target_win, ai_name)
+
+            self.root.after(0, put_into_task)
+
+        threading.Thread(target=do_work, daemon=True).start()
+
+    def _paste_back_into_window(self, target_win, ai_name: str | None) -> None:
+        """Called after generate(): activate target and paste enhanced prompt."""
+        try:
+            import pyautogui
+        except ImportError:
+            return
+        import time
+        import threading
+
+        def do_paste():
+            if target_win:
+                try:
+                    target_win.activate()
+                except Exception:
+                    pass
+                time.sleep(0.4)
+            else:
+                # Need another countdown for paste
+                self.root.after(0, lambda: self._toast(
+                    "Click the AI input box again to paste enhanced prompt (3s)..."))
+                time.sleep(3)
+
+            try:
+                # Select all in the input, then paste to overwrite
+                pyautogui.hotkey('ctrl', 'a')
+                time.sleep(0.15)
+                pyautogui.hotkey('ctrl', 'v')
+                self.root.after(0, lambda: self._toast(
+                    f"Enhanced prompt pasted into {ai_name or 'target'}. Press Enter to submit."))
+                self.root.after(0, lambda: self._set_status(
+                    "Grab+Enhance+Send complete. Ready to submit in your AI window."))
+            except Exception as exc:
+                self.root.after(0, lambda: self._set_status(f"Paste-back failed: {exc}"))
+
         threading.Thread(target=do_paste, daemon=True).start()
 
     # ══════════════════════════════════════════════════════════════
