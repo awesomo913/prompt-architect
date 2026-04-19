@@ -343,6 +343,102 @@ def scan_projects_folder(root_path: Path, max_projects: int = 100) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════
+# MODEL CATALOG — Reference page for each AI service's models.
+# Used by _recommend_model() to suggest the most efficient model for
+# a given prompt's characteristics (size, complexity, category).
+# This is a suggestion, not a forced setting — the tool just tells
+# you which model you should select before you paste.
+# ═══════════════════════════════════════════════════════════════════
+
+MODEL_CATALOG: dict = {
+    "Claude": {
+        "docs_url": "https://docs.claude.com/en/docs/about-claude/models/overview",
+        "tiers": {
+            "cheap": {
+                "name": "Claude Haiku 4.5",
+                "context": 200_000,
+                "input_per_million": 1.00,
+                "best_for": "quick edits, simple Q&A, chat, short code changes",
+            },
+            "balanced": {
+                "name": "Claude Sonnet 4.5",
+                "context": 200_000,
+                "input_per_million": 3.00,
+                "best_for": "most coding, general reasoning, Agent SDK work, refactoring",
+            },
+            "premium": {
+                "name": "Claude Opus 4.5",
+                "context": 200_000,
+                "input_per_million": 15.00,
+                "best_for": "complex multi-step reasoning, large refactors, novel problems, agents",
+            },
+        },
+    },
+    "ChatGPT": {
+        "docs_url": "https://platform.openai.com/docs/models",
+        "tiers": {
+            "cheap": {
+                "name": "GPT-4o-mini",
+                "context": 128_000,
+                "input_per_million": 0.15,
+                "best_for": "simple tasks, chat, quick summaries, cheap batch work",
+            },
+            "balanced": {
+                "name": "GPT-4o",
+                "context": 128_000,
+                "input_per_million": 2.50,
+                "best_for": "general coding, multimodal (images), most daily prompts",
+            },
+            "premium": {
+                "name": "o1 / GPT-4.5",
+                "context": 128_000,
+                "input_per_million": 15.00,
+                "best_for": "hard reasoning, math, science, step-by-step logic",
+            },
+        },
+    },
+    "Gemini": {
+        "docs_url": "https://ai.google.dev/gemini-api/docs/models",
+        "tiers": {
+            "cheap": {
+                "name": "Gemini 2.5 Flash",
+                "context": 1_000_000,
+                "input_per_million": 0.10,
+                "best_for": "simple tasks with big documents (1M context), cheap + fast",
+            },
+            "balanced": {
+                "name": "Gemini 2.5 Pro",
+                "context": 2_000_000,
+                "input_per_million": 1.25,
+                "best_for": "huge codebases (2M context!), long doc analysis, RAG pipelines",
+            },
+            "premium": {
+                "name": "Gemini 2.5 Ultra",
+                "context": 2_000_000,
+                "input_per_million": 7.00,
+                "best_for": "premium reasoning + long context combined",
+            },
+        },
+    },
+}
+
+# For Image/Video categories — these use dedicated generation services
+IMAGE_MODELS = {
+    "Midjourney v7": "High-quality artistic, photorealistic. Discord-based. ~$10/mo subscription.",
+    "DALL-E 3 (via ChatGPT Plus)": "Good for text-in-image, easy access. Free with Plus.",
+    "Stable Diffusion XL / Flux": "Free/local. Full control, fine-tune-able, slower setup.",
+    "Nano Banana (Gemini)": "Integrated in Gemini. Good for quick concept art.",
+}
+
+VIDEO_MODELS = {
+    "Sora (OpenAI)": "Best quality, long shots. Access via ChatGPT Pro.",
+    "Runway Gen-3": "Fast, good motion. $15-$95/mo.",
+    "Pika Labs 1.5": "Fast iteration, good prompt adherence.",
+    "Luma Dream Machine": "Cinematic shots, 5-sec clips free tier.",
+}
+
+
+# ═══════════════════════════════════════════════════════════════════
 # PROMPT TYPES
 # ═══════════════════════════════════════════════════════════════════
 
@@ -2860,6 +2956,14 @@ class PromptArchitect:
             if any("Quality Rules" in n for n in no_items):
                 lines.append("    -> Check: Python Best Practices, Security, Robustness")
 
+        # Model recommendation block (default service = Claude; user can pick any)
+        try:
+            rec = self._recommend_model("Claude", final_prompt)
+            lines.append("")
+            lines.append(self._format_model_for_review(rec))
+        except Exception as exc:
+            logger.warning(f"Model recommendation failed: {exc}")
+
         lines.append("")
         lines.append("  TIP: Use Copy Prompt Only to grab just the prompt without this review.")
         lines.append("=" * 60)
@@ -3009,6 +3113,152 @@ class PromptArchitect:
         self._set_status("Could not find matching history entry")
 
     # ══════════════════════════════════════════════════════════════
+    # MODEL RECOMMENDATION (v5.1)
+    # ══════════════════════════════════════════════════════════════
+
+    def _recommend_model(self, ai_name: str | None, prompt_text: str) -> dict:
+        """Recommend the best model tier for this prompt based on task characteristics.
+
+        Returns a dict with keys:
+            - service: The AI service ("Claude", "ChatGPT", "Gemini", or None)
+            - tier: "cheap" | "balanced" | "premium"
+            - name: Concrete model name (e.g. "Claude Sonnet 4.5")
+            - reason: One-sentence explanation for why
+            - cost_estimate: Estimated input cost in dollars for this prompt
+            - image_note / video_note: For image/video categories, suggests
+              dedicated generation services instead of text models.
+
+        If ai_name is None, defaults to "Claude" for the recommendation but
+        returns generic guidance the user can apply across services.
+        """
+        category = self.prompt_category_var.get() if hasattr(self, "prompt_category_var") else "Code"
+
+        # Image/Video → suggest dedicated generation services, not text models
+        if category == "Image":
+            suggested = "Midjourney v7 (quality) or DALL-E 3 (easy via ChatGPT Plus)"
+            return {
+                "service": None,
+                "tier": "image",
+                "name": suggested,
+                "reason": "Image prompts go to image generation services, not LLMs.",
+                "cost_estimate": 0.0,
+                "image_note": "\n".join(f"  - {m}: {d}" for m, d in IMAGE_MODELS.items()),
+            }
+        if category == "Video":
+            suggested = "Sora (quality) or Runway Gen-3 (fast)"
+            return {
+                "service": None,
+                "tier": "video",
+                "name": suggested,
+                "reason": "Video prompts go to video generation services, not LLMs.",
+                "cost_estimate": 0.0,
+                "video_note": "\n".join(f"  - {m}: {d}" for m, d in VIDEO_MODELS.items()),
+            }
+
+        # Text/code: pick tier based on prompt characteristics
+        service = ai_name if ai_name in MODEL_CATALOG else "Claude"
+        tiers = MODEL_CATALOG[service]["tiers"]
+
+        token_estimate = max(1, len(prompt_text) // 4)
+
+        # Heuristics for tier selection
+        #   Cheap: short, simple, or pure conversation
+        #   Balanced: most code work, moderate context
+        #   Premium: huge context, complex projects, hard reasoning
+        project_key = self.my_project_var.get() if hasattr(self, "my_project_var") else "(None)"
+        has_project = project_key and project_key != "(None)"
+        is_followup = bool(getattr(self, "_update_chain", []))
+        low_token_on = hasattr(self, "_low_token_var") and self._low_token_var.get()
+
+        # Estimate effectiveness without a full rerun (we have all the inputs)
+        has_reasoning = hasattr(self, "reasoning_var") and self.reasoning_var.get() != "None"
+        has_constraints = any(
+            v.get() for v in getattr(self, "constraint_vars", {}).values()
+        )
+
+        reason_parts: list[str] = []
+        tier = "balanced"  # default
+
+        if token_estimate > 50_000:
+            tier = "balanced" if service == "Gemini" else "premium"
+            reason_parts.append(f"{token_estimate:,} tokens — needs a big-context model")
+        elif token_estimate < 300 and not has_project and not has_reasoning:
+            tier = "cheap"
+            reason_parts.append("small, simple prompt — cheap tier is enough")
+        elif category == "Conversation" and not has_constraints:
+            tier = "cheap"
+            reason_parts.append("casual conversation doesn't need a coding model")
+        elif is_followup and not low_token_on:
+            tier = "cheap" if token_estimate < 1500 else "balanced"
+            reason_parts.append(
+                "follow-up update — AI already has context, cheaper model works"
+            )
+        elif has_project and token_estimate > 3000:
+            tier = "premium"
+            reason_parts.append(
+                "large project context + complex task — premium tier reasons best"
+            )
+        elif category == "Code" and has_project:
+            tier = "balanced"
+            reason_parts.append("typical coding task with project context — balanced is ideal")
+        elif category == "Code":
+            tier = "balanced"
+            reason_parts.append("general coding — balanced models handle most tasks well")
+
+        if not reason_parts:
+            reason_parts.append(f"{token_estimate:,} tokens — balanced tier default")
+
+        model = tiers[tier]
+
+        # Cost estimate (input tokens only — output billed separately)
+        cost = (token_estimate / 1_000_000) * model["input_per_million"]
+
+        return {
+            "service": service,
+            "tier": tier,
+            "name": model["name"],
+            "reason": "; ".join(reason_parts),
+            "cost_estimate": cost,
+            "context_limit": model["context"],
+            "best_for": model["best_for"],
+            "docs_url": MODEL_CATALOG[service]["docs_url"],
+        }
+
+    def _format_model_toast(self, rec: dict) -> str:
+        """Short toast message: Use [model name] — [reason]."""
+        if rec.get("image_note") or rec.get("video_note"):
+            return f"Suggested: {rec['name']} (see reference pane)"
+        cost_str = f" ~${rec['cost_estimate']:.4f}" if rec.get("cost_estimate", 0) > 0 else ""
+        return f"Use {rec['name']}{cost_str} — {rec['reason']}"
+
+    def _format_model_for_review(self, rec: dict) -> str:
+        """Multi-line block shown in the Results Review."""
+        lines = [
+            "  " + "-" * 50,
+            "  MODEL RECOMMENDATION (suggestion only — not forced)",
+            "  " + "-" * 50,
+        ]
+        if rec.get("image_note"):
+            lines.append(f"  For image prompts, choose one of these services:")
+            lines.append(rec["image_note"])
+            lines.append("  Paste this prompt as your image description, plus any extras.")
+            return "\n".join(lines)
+        if rec.get("video_note"):
+            lines.append(f"  For video prompts, choose one of these services:")
+            lines.append(rec["video_note"])
+            return "\n".join(lines)
+
+        lines.append(f"  Suggested: {rec['name']}")
+        lines.append(f"  Tier:      {rec['tier']}  ({rec['service']} service)")
+        lines.append(f"  Context:   {rec['context_limit']:,} tokens available")
+        lines.append(f"  Best for:  {rec['best_for']}")
+        if rec.get("cost_estimate", 0) > 0:
+            lines.append(f"  Est. cost: ~${rec['cost_estimate']:.4f} (input only)")
+        lines.append(f"  Why:       {rec['reason']}")
+        lines.append(f"  Docs:      {rec['docs_url']}")
+        return "\n".join(lines)
+
+    # ══════════════════════════════════════════════════════════════
     # SEND TO AI WINDOW
     # ══════════════════════════════════════════════════════════════
 
@@ -3067,13 +3317,16 @@ class PromptArchitect:
                 continue
 
         if not found:
+            rec = self._recommend_model(ai_name, content)
+            rec_msg = self._format_model_toast(rec)
             messagebox.showwarning(
                 f"{ai_name} Not Found",
                 f"Could not find an open {ai_name} window.\n\n"
                 f"Make sure {ai_name} is open in your browser, then try again.\n\n"
-                f"The prompt has been copied to your clipboard — you can paste it manually with Ctrl+V."
+                f"The prompt has been copied to your clipboard — paste manually with Ctrl+V.\n\n"
+                f"Model suggestion: {rec_msg}"
             )
-            self._set_status(f"Prompt copied — {ai_name} window not found, paste manually")
+            self._set_status(f"Copied to clipboard. {rec_msg}")
             return
 
         # Give the window time to come to front
@@ -3083,8 +3336,15 @@ class PromptArchitect:
         # Paste into the input field
         try:
             pyautogui.hotkey('ctrl', 'v')
-            self._toast(f"Prompt sent to {ai_name}!")
-            self._set_status(f"Prompt pasted into {ai_name}")
+            # Model recommendation toast: show which model the user should pick
+            rec = self._recommend_model(ai_name, content)
+            rec_msg = self._format_model_toast(rec)
+            self._toast(f"Pasted into {ai_name}! {rec_msg}", duration=6000)
+            self._set_status(f"{ai_name}: {rec_msg}")
+            logger.info(
+                f"Send to {ai_name}: recommended {rec.get('name')} "
+                f"(tier={rec.get('tier')}, reason={rec.get('reason')})"
+            )
         except Exception as e:
             self._set_status(f"Paste failed: {e} — prompt is on clipboard, paste manually")
 
@@ -3109,13 +3369,17 @@ class PromptArchitect:
         self._toast("Click the AI input box now! Pasting in 3 seconds...")
         self._set_status("Pasting in 3 seconds — click your target window NOW")
 
+        # Pre-compute recommendation so it's ready for the toast
+        rec = self._recommend_model(None, content)
+        rec_msg = self._format_model_toast(rec)
+
         def do_paste():
             import time
             time.sleep(3)
             try:
                 pyautogui.hotkey('ctrl', 'v')
-                self.root.after(0, lambda: self._toast("Prompt pasted!"))
-                self.root.after(0, lambda: self._set_status("Prompt pasted into target window"))
+                self.root.after(0, lambda: self._toast(f"Pasted! {rec_msg}", duration=6000))
+                self.root.after(0, lambda: self._set_status(rec_msg))
             except Exception as e:
                 self.root.after(0, lambda: self._set_status(f"Paste failed: {e}"))
 
@@ -3241,6 +3505,15 @@ class PromptArchitect:
         import time
         import threading
 
+        # Pre-compute recommendation (based on the enhanced prompt on clipboard)
+        try:
+            import pyperclip as _pc
+            enhanced = _pc.paste() or ""
+        except Exception:
+            enhanced = ""
+        rec = self._recommend_model(ai_name, enhanced)
+        rec_msg = self._format_model_toast(rec)
+
         def do_paste():
             if target_win:
                 try:
@@ -3260,9 +3533,9 @@ class PromptArchitect:
                 time.sleep(0.15)
                 pyautogui.hotkey('ctrl', 'v')
                 self.root.after(0, lambda: self._toast(
-                    f"Enhanced prompt pasted into {ai_name or 'target'}. Press Enter to submit."))
+                    f"Pasted into {ai_name or 'target'}. {rec_msg}", duration=6500))
                 self.root.after(0, lambda: self._set_status(
-                    "Grab+Enhance+Send complete. Ready to submit in your AI window."))
+                    f"Grab+Enhance+Send complete. {rec_msg}"))
             except Exception as exc:
                 self.root.after(0, lambda: self._set_status(f"Paste-back failed: {exc}"))
 
