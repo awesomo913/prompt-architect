@@ -354,73 +354,114 @@ MODEL_CATALOG: dict = {
     "Claude": {
         "docs_url": "https://docs.claude.com/en/docs/about-claude/models/overview",
         "tiers": {
-            "cheap": {
-                "name": "Claude Haiku 4.5",
-                "context": 200_000,
-                "input_per_million": 1.00,
-                "best_for": "quick edits, simple Q&A, chat, short code changes",
-            },
-            "balanced": {
-                "name": "Claude Sonnet 4.5",
-                "context": 200_000,
-                "input_per_million": 3.00,
-                "best_for": "most coding, general reasoning, Agent SDK work, refactoring",
-            },
-            "premium": {
-                "name": "Claude Opus 4.5",
-                "context": 200_000,
-                "input_per_million": 15.00,
-                "best_for": "complex multi-step reasoning, large refactors, novel problems, agents",
-            },
+            "cheap":    {"name": "Claude Haiku 4.5",  "context": 200_000, "input_per_million": 1.00,  "best_for": "quick edits, simple Q&A, chat, short code changes"},
+            "balanced": {"name": "Claude Sonnet 4.5", "context": 200_000, "input_per_million": 3.00,  "best_for": "most coding, general reasoning, Agent SDK work, refactoring"},
+            "premium":  {"name": "Claude Opus 4.5",   "context": 200_000, "input_per_million": 15.00, "best_for": "complex multi-step reasoning, large refactors, novel problems, agents"},
         },
     },
     "ChatGPT": {
         "docs_url": "https://platform.openai.com/docs/models",
         "tiers": {
-            "cheap": {
-                "name": "GPT-4o-mini",
-                "context": 128_000,
-                "input_per_million": 0.15,
-                "best_for": "simple tasks, chat, quick summaries, cheap batch work",
-            },
-            "balanced": {
-                "name": "GPT-4o",
-                "context": 128_000,
-                "input_per_million": 2.50,
-                "best_for": "general coding, multimodal (images), most daily prompts",
-            },
-            "premium": {
-                "name": "o1 / GPT-4.5",
-                "context": 128_000,
-                "input_per_million": 15.00,
-                "best_for": "hard reasoning, math, science, step-by-step logic",
-            },
+            "cheap":    {"name": "GPT-5-mini",  "context": 400_000,   "input_per_million": 0.25, "best_for": "simple tasks, chat, quick summaries, cheap batch work"},
+            "balanced": {"name": "GPT-5",       "context": 400_000,   "input_per_million": 2.50, "best_for": "general coding, multimodal (images), most daily prompts"},
+            "premium":  {"name": "o3 / o4-pro", "context": 200_000,   "input_per_million": 15.00, "best_for": "hard reasoning, math, science, step-by-step logic, complex agents"},
         },
     },
     "Gemini": {
         "docs_url": "https://ai.google.dev/gemini-api/docs/models",
         "tiers": {
-            "cheap": {
-                "name": "Gemini 2.5 Flash",
-                "context": 1_000_000,
-                "input_per_million": 0.10,
-                "best_for": "simple tasks with big documents (1M context), cheap + fast",
-            },
-            "balanced": {
-                "name": "Gemini 2.5 Pro",
-                "context": 2_000_000,
-                "input_per_million": 1.25,
-                "best_for": "huge codebases (2M context!), long doc analysis, RAG pipelines",
-            },
-            "premium": {
-                "name": "Gemini 2.5 Ultra",
-                "context": 2_000_000,
-                "input_per_million": 7.00,
-                "best_for": "premium reasoning + long context combined",
-            },
+            "cheap":    {"name": "Gemini 2.5 Flash", "context": 1_000_000, "input_per_million": 0.10, "best_for": "simple tasks with big documents (1M context), cheap + fast"},
+            "balanced": {"name": "Gemini 2.5 Pro",   "context": 2_000_000, "input_per_million": 1.25, "best_for": "huge codebases (2M context!), long doc analysis, RAG pipelines"},
+            "premium":  {"name": "Gemini 2.5 Ultra", "context": 2_000_000, "input_per_million": 7.00, "best_for": "premium reasoning + long context combined"},
         },
     },
+    "DeepSeek": {
+        "docs_url": "https://api-docs.deepseek.com/quick_start/pricing",
+        "tiers": {
+            "cheap":    {"name": "DeepSeek V3 Chat", "context": 128_000, "input_per_million": 0.27, "best_for": "cheap daily chat, fast summaries, simple code"},
+            "balanced": {"name": "DeepSeek V3",      "context": 128_000, "input_per_million": 0.27, "best_for": "coding, general reasoning — punches way above its price"},
+            "premium":  {"name": "DeepSeek R1",      "context": 128_000, "input_per_million": 0.55, "best_for": "reasoning model — math, logic, hard debugging. Shows its thinking."},
+        },
+    },
+    "Qwen": {
+        "docs_url": "https://help.aliyun.com/zh/model-studio/developer-reference/what-is-qwen-llm",
+        "tiers": {
+            "cheap":    {"name": "Qwen3-Turbo",   "context": 1_000_000, "input_per_million": 0.05, "best_for": "cheapest for big context, simple tasks, multilingual (esp. Chinese)"},
+            "balanced": {"name": "Qwen3-Plus",    "context": 128_000,   "input_per_million": 0.40, "best_for": "balanced — strong coding and reasoning, cost-efficient"},
+            "premium":  {"name": "Qwen3-Max",     "context": 128_000,   "input_per_million": 1.60, "best_for": "top-tier reasoning and coding, challenges GPT-5 in benchmarks"},
+        },
+        "specialist": {"name": "Qwen3-Coder",     "context": 1_000_000, "input_per_million": 0.30, "best_for": "dedicated coding model — 1M context, fine-tuned on code"},
+    },
+    "Mistral": {
+        "docs_url": "https://docs.mistral.ai/getting-started/models/models_overview",
+        "tiers": {
+            "cheap":    {"name": "Mistral Small 3",   "context": 128_000, "input_per_million": 0.20, "best_for": "simple tasks, EU-hosted data privacy"},
+            "balanced": {"name": "Mistral Large 2",   "context": 128_000, "input_per_million": 2.00, "best_for": "general coding + reasoning, European alternative"},
+            "premium":  {"name": "Mistral Medium 3",  "context": 128_000, "input_per_million": 0.40, "best_for": "flagship — frontier-class at middle prices"},
+        },
+        "specialist": {"name": "Codestral 25.08",     "context": 256_000, "input_per_million": 0.30, "best_for": "dedicated code model — FIM (fill-in-middle), 80+ languages"},
+    },
+    "Grok (xAI)": {
+        "docs_url": "https://docs.x.ai/docs/models",
+        "tiers": {
+            "cheap":    {"name": "Grok-4 Fast",  "context": 2_000_000, "input_per_million": 0.20, "best_for": "fast + cheap + huge context — good for agents"},
+            "balanced": {"name": "Grok-4",       "context": 256_000,   "input_per_million": 3.00, "best_for": "real-time X/Twitter awareness, reasoning, web search built in"},
+            "premium":  {"name": "Grok-4 Heavy", "context": 256_000,   "input_per_million": 15.00, "best_for": "frontier model — top benchmarks, agentic work"},
+        },
+    },
+    "Perplexity": {
+        "docs_url": "https://docs.perplexity.ai/guides/model-cards",
+        "tiers": {
+            "cheap":    {"name": "Sonar",        "context": 200_000, "input_per_million": 0.20, "best_for": "fast web search + answer synthesis, citations"},
+            "balanced": {"name": "Sonar Pro",    "context": 200_000, "input_per_million": 3.00, "best_for": "deep research — multi-hop web search with sources"},
+            "premium":  {"name": "Sonar Reasoning Pro", "context": 200_000, "input_per_million": 3.00, "best_for": "research + reasoning combo — shows its work, real-time data"},
+        },
+    },
+    "Llama (Meta)": {
+        "docs_url": "https://www.llama.com/docs/overview/",
+        "tiers": {
+            "cheap":    {"name": "Llama 3.3 70B",   "context": 128_000, "input_per_million": 0.20, "best_for": "open-weight, self-hostable, cheap via providers like Groq/Together"},
+            "balanced": {"name": "Llama 4 Maverick", "context": 1_000_000, "input_per_million": 0.35, "best_for": "multimodal open-weight — 1M context, 17B active params"},
+            "premium":  {"name": "Llama 4 Behemoth", "context": 1_000_000, "input_per_million": 1.00, "best_for": "frontier open-weight — 288B active, competitive with closed frontier"},
+        },
+    },
+    "OpenCoder": {
+        "docs_url": "https://opencoder-llm.github.io/",
+        "tiers": {
+            "cheap":    {"name": "OpenCoder-1.5B", "context": 8_192,   "input_per_million": 0.00, "best_for": "self-hosted, tiny, fast — for offline or air-gapped work"},
+            "balanced": {"name": "OpenCoder-8B",   "context": 32_768,  "input_per_million": 0.00, "best_for": "self-hosted code model — fully open data + weights, no API cost"},
+            "premium":  {"name": "OpenCoder-8B-Instruct", "context": 32_768, "input_per_million": 0.00, "best_for": "instruction-tuned for chat-style coding — still free/self-hosted"},
+        },
+        "note": "Zero API cost — runs locally via Ollama / vLLM / transformers. Trade CPU/GPU time for token cost.",
+    },
+    "OpenRouter": {
+        "docs_url": "https://openrouter.ai/docs/quickstart",
+        "is_router": True,
+        "tiers": {
+            "cheap":    {"name": "deepseek/deepseek-chat",      "context": 128_000, "input_per_million": 0.27, "best_for": "cheap proxy to DeepSeek via OpenRouter"},
+            "balanced": {"name": "anthropic/claude-sonnet-4.5", "context": 200_000, "input_per_million": 3.00, "best_for": "proxy to Claude Sonnet 4.5 — OpenAI-compatible API, unified billing"},
+            "premium":  {"name": "openai/gpt-5",                "context": 400_000, "input_per_million": 2.50, "best_for": "proxy to GPT-5 — one API key, many models, free + paid tiers"},
+        },
+        "note": "Router service — lets you use any model from any vendor through one API. Add +5% OpenRouter fee on top.",
+    },
 }
+
+# AI_SERVICES drives the Send/Grab buttons and window detection.
+# Each entry: (display_name, color_key, window_title_keywords, catalog_key_or_None).
+# catalog_key_or_None controls the recommendation target when that AI is chosen.
+AI_SERVICES: list[tuple[str, str, list[str], str | None]] = [
+    ("Claude",     "mauve", ["claude.ai", "Claude"],                "Claude"),
+    ("ChatGPT",    "green", ["chatgpt.com", "ChatGPT", "chat.openai.com"], "ChatGPT"),
+    ("Gemini",     "blue",  ["gemini.google", "Gemini"],            "Gemini"),
+    ("DeepSeek",   "teal",  ["chat.deepseek.com", "DeepSeek"],      "DeepSeek"),
+    ("Qwen",       "peach", ["chat.qwen.ai", "Qwen", "Tongyi"],     "Qwen"),
+    ("Mistral",    "yellow", ["chat.mistral.ai", "Le Chat", "Mistral"], "Mistral"),
+    ("Grok",       "red",    ["grok.com", "Grok"],                   "Grok (xAI)"),
+    ("Perplexity", "pink",   ["perplexity.ai", "Perplexity"],        "Perplexity"),
+    ("OpenRouter", "surface", ["openrouter.ai", "OpenRouter"],       "OpenRouter"),
+    # OpenCoder/Llama typically run locally or via APIs, no browser UI — included
+    # in the catalog but no window search term.
+]
 
 # For Image/Video categories — these use dedicated generation services
 IMAGE_MODELS = {
@@ -1962,55 +2003,107 @@ class PromptArchitect:
             btn.bind("<Leave>", lambda e, b=btn, ck=color_key: b.config(bg=self._active_colors()[ck]))
             self._tooltips.append(ToolTip(btn, tooltip_text, c))
 
-        # ── Grab from AI row (pull current AI input, enhance, paste back) ──
+        # Primary AI services shown as buttons (rest go in the overflow combobox)
+        primary_services = ["Claude", "ChatGPT", "Gemini"]
+
+        # ── Grab from AI row ──
         grab_frame = ttk.Frame(parent)
         grab_frame.pack(fill=tk.X, pady=(4, 2))
-        ttk.Label(grab_frame, text="Grab current input from an AI, enhance it, paste back:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 8))
-        grab_targets = [
-            ("\U0001f4e5 Grab Claude", "mauve", lambda: self._grab_enhance_send("Claude"),
-             "Grab whatever's in your Claude input box, enhance with project context + token savings, paste back ready to submit."),
-            ("\U0001f4e5 Grab ChatGPT", "green", lambda: self._grab_enhance_send("ChatGPT"),
-             "Same as Claude but for ChatGPT."),
-            ("\U0001f4e5 Grab Gemini", "blue", lambda: self._grab_enhance_send("Gemini"),
-             "Same as Claude but for Gemini."),
-            ("\U0001f4e5 Grab Any", "teal", lambda: self._grab_enhance_send(None),
-             "Pick any window: 3-sec countdown, click your AI's input box, it grabs + enhances + pastes back."),
-        ]
-        for text, ck, cmd, tip in grab_targets:
+        ttk.Label(grab_frame, text="Grab + Enhance + Send:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 8))
+        for display_name, color_key, _search, _cat_key in AI_SERVICES:
+            if display_name not in primary_services:
+                continue
             btn = tk.Button(
-                grab_frame, text=text, command=cmd,
-                bg=c[ck], fg=c["dark"], font=("Segoe UI", 9, "bold"),
+                grab_frame, text=f"\U0001f4e5 {display_name}",
+                command=lambda n=display_name: self._grab_enhance_send(n),
+                bg=c[color_key], fg=c["dark"], font=("Segoe UI", 9, "bold"),
                 relief=tk.FLAT, padx=10, pady=4, cursor="hand2",
             )
             btn.pack(side=tk.LEFT, padx=(0, 4))
-            self._themed_buttons.append((btn, ck, ck))
-            hover_color = _lighten_color(c[ck])
-            btn.bind("<Enter>", lambda e, b=btn, hc=hover_color: b.config(bg=hc))
-            btn.bind("<Leave>", lambda e, b=btn, ckey=ck: b.config(bg=self._active_colors()[ckey]))
-            self._tooltips.append(ToolTip(btn, tip, c))
+            self._themed_buttons.append((btn, color_key, color_key))
+            hover = _lighten_color(c[color_key])
+            btn.bind("<Enter>", lambda e, b=btn, h=hover: b.config(bg=h))
+            btn.bind("<Leave>", lambda e, b=btn, ck=color_key: b.config(bg=self._active_colors()[ck]))
+            self._tooltips.append(ToolTip(
+                btn, f"Grab what's in the {display_name} input box, enhance with project "
+                     f"context + token savings, paste back ready to submit.", c))
+        # Any window
+        any_grab = tk.Button(
+            grab_frame, text="\U0001f4e5 Any",
+            command=lambda: self._grab_enhance_send(None),
+            bg=c["teal"], fg=c["dark"], font=("Segoe UI", 9, "bold"),
+            relief=tk.FLAT, padx=10, pady=4, cursor="hand2",
+        )
+        any_grab.pack(side=tk.LEFT, padx=(0, 4))
+        self._themed_buttons.append((any_grab, "teal", "teal"))
+        self._tooltips.append(ToolTip(any_grab, "3-sec countdown: click any AI input, then grab+enhance+paste-back.", c))
 
         # ── Send to AI row ──
         send_frame = ttk.Frame(parent)
         send_frame.pack(fill=tk.X, pady=(4, 2))
-        ttk.Label(send_frame, text="Send prompt directly to an open AI window:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 8))
-        ai_targets = [
-            ("\U0001f4e4 Claude", "mauve", lambda: self._send_to_ai_window("Claude"), "Find any Claude browser tab, click its input box, and paste your prompt"),
-            ("\U0001f4e4 ChatGPT", "green", lambda: self._send_to_ai_window("ChatGPT"), "Find any ChatGPT browser tab, click its input box, and paste your prompt"),
-            ("\U0001f4e4 Gemini", "blue", lambda: self._send_to_ai_window("Gemini"), "Find any Gemini browser tab, click its input box, and paste your prompt"),
-            ("\U0001f4e4 Any Window", "teal", lambda: self._send_to_any_window(), "Pick any window on screen to paste into"),
-        ]
-        for text, ck, cmd, tip in ai_targets:
+        ttk.Label(send_frame, text="Send prompt to AI:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 8))
+        for display_name, color_key, _search, _cat_key in AI_SERVICES:
+            if display_name not in primary_services:
+                continue
             btn = tk.Button(
-                send_frame, text=text, command=cmd,
-                bg=c[ck], fg=c["dark"], font=("Segoe UI", 9, "bold"),
+                send_frame, text=f"\U0001f4e4 {display_name}",
+                command=lambda n=display_name: self._send_to_ai_window(n),
+                bg=c[color_key], fg=c["dark"], font=("Segoe UI", 9, "bold"),
                 relief=tk.FLAT, padx=10, pady=4, cursor="hand2",
             )
             btn.pack(side=tk.LEFT, padx=(0, 4))
-            self._themed_buttons.append((btn, ck, ck))
-            hover_color = _lighten_color(c[ck])
-            btn.bind("<Enter>", lambda e, b=btn, hc=hover_color: b.config(bg=hc))
-            btn.bind("<Leave>", lambda e, b=btn, ckey=ck: b.config(bg=self._active_colors()[ckey]))
-            self._tooltips.append(ToolTip(btn, tip, c))
+            self._themed_buttons.append((btn, color_key, color_key))
+            hover = _lighten_color(c[color_key])
+            btn.bind("<Enter>", lambda e, b=btn, h=hover: b.config(bg=h))
+            btn.bind("<Leave>", lambda e, b=btn, ck=color_key: b.config(bg=self._active_colors()[ck]))
+            self._tooltips.append(ToolTip(
+                btn, f"Find an open {display_name} browser tab and paste your prompt.", c))
+        any_send = tk.Button(
+            send_frame, text="\U0001f4e4 Any Window",
+            command=self._send_to_any_window,
+            bg=c["teal"], fg=c["dark"], font=("Segoe UI", 9, "bold"),
+            relief=tk.FLAT, padx=10, pady=4, cursor="hand2",
+        )
+        any_send.pack(side=tk.LEFT, padx=(0, 4))
+        self._themed_buttons.append((any_send, "teal", "teal"))
+        self._tooltips.append(ToolTip(any_send, "Pick any window: 3-sec countdown, paste into whatever you click.", c))
+
+        # ── Other AIs dropdown (overflow) ──
+        # Gives access to DeepSeek, Qwen, Mistral, Grok, Perplexity, OpenRouter
+        # without cluttering the button rows.
+        more_frame = ttk.Frame(parent)
+        more_frame.pack(fill=tk.X, pady=(4, 2))
+        ttk.Label(more_frame, text="More AIs:", style="Sub.TLabel").pack(side=tk.LEFT, padx=(0, 8))
+
+        other_ai_names = [n for n, *_ in AI_SERVICES if n not in primary_services]
+        self._other_ai_var = tk.StringVar(value=other_ai_names[0] if other_ai_names else "")
+        other_combo = ttk.Combobox(
+            more_frame, textvariable=self._other_ai_var,
+            state="readonly", width=14, font=("Segoe UI", 9),
+            values=other_ai_names,
+        )
+        other_combo.pack(side=tk.LEFT, padx=(0, 6))
+
+        for label, color_key, cmd_name, tip in [
+            ("\U0001f4e5 Grab", "peach", "grab",
+             "Grab+enhance+paste-back for the AI selected in the dropdown"),
+            ("\U0001f4e4 Send", "surface", "send",
+             "Send current prompt to the AI selected in the dropdown"),
+            ("\u2398 Copy & Show Model", "blue", "copy",
+             "Copy prompt to clipboard and show recommended model for the selected AI"),
+        ]:
+            mbtn = tk.Button(
+                more_frame, text=label,
+                command=lambda act=cmd_name: self._dispatch_other_ai(act),
+                bg=c[color_key], fg=c["dark"], font=("Segoe UI", 9, "bold"),
+                relief=tk.FLAT, padx=10, pady=4, cursor="hand2",
+            )
+            mbtn.pack(side=tk.LEFT, padx=(0, 4))
+            self._themed_buttons.append((mbtn, color_key, color_key))
+            hover = _lighten_color(c[color_key])
+            mbtn.bind("<Enter>", lambda e, b=mbtn, h=hover: b.config(bg=h))
+            mbtn.bind("<Leave>", lambda e, b=mbtn, ck=color_key: b.config(bg=self._active_colors()[ck]))
+            self._tooltips.append(ToolTip(mbtn, tip, c))
 
     # ── Templates tab ────────────────────────────────────────────
 
@@ -3157,31 +3250,37 @@ class PromptArchitect:
 
         # Text/code: pick tier based on prompt characteristics
         service = ai_name if ai_name in MODEL_CATALOG else "Claude"
-        tiers = MODEL_CATALOG[service]["tiers"]
+        service_data = MODEL_CATALOG[service]
+        tiers = service_data["tiers"]
 
         token_estimate = max(1, len(prompt_text) // 4)
 
-        # Heuristics for tier selection
-        #   Cheap: short, simple, or pure conversation
-        #   Balanced: most code work, moderate context
-        #   Premium: huge context, complex projects, hard reasoning
+        # Services whose cheap/balanced tiers already have 1M+ context —
+        # big prompts don't force them to premium.
+        big_context_services = {"Gemini", "Qwen", "Grok (xAI)", "Llama (Meta)"}
+
+        # Heuristics
         project_key = self.my_project_var.get() if hasattr(self, "my_project_var") else "(None)"
         has_project = project_key and project_key != "(None)"
         is_followup = bool(getattr(self, "_update_chain", []))
         low_token_on = hasattr(self, "_low_token_var") and self._low_token_var.get()
-
-        # Estimate effectiveness without a full rerun (we have all the inputs)
         has_reasoning = hasattr(self, "reasoning_var") and self.reasoning_var.get() != "None"
         has_constraints = any(
             v.get() for v in getattr(self, "constraint_vars", {}).values()
         )
 
         reason_parts: list[str] = []
-        tier = "balanced"  # default
+        tier = "balanced"
 
         if token_estimate > 50_000:
-            tier = "balanced" if service == "Gemini" else "premium"
-            reason_parts.append(f"{token_estimate:,} tokens — needs a big-context model")
+            if service in big_context_services:
+                tier = "balanced"
+                reason_parts.append(
+                    f"{token_estimate:,} tokens — {service}'s balanced tier has huge context, no need to escalate"
+                )
+            else:
+                tier = "premium"
+                reason_parts.append(f"{token_estimate:,} tokens — needs a big-context model")
         elif token_estimate < 300 and not has_project and not has_reasoning:
             tier = "cheap"
             reason_parts.append("small, simple prompt — cheap tier is enough")
@@ -3210,10 +3309,24 @@ class PromptArchitect:
 
         model = tiers[tier]
 
-        # Cost estimate (input tokens only — output billed separately)
+        # Specialist override: if the service has a specialist model (Qwen3-Coder,
+        # Codestral) and the category is Code, suggest that instead of the tier.
+        specialist = service_data.get("specialist")
+        if specialist and category == "Code":
+            model = specialist
+            reason_parts.append(
+                f"— also consider the dedicated code model {specialist['name']}"
+            )
+
+        # Cost estimate (input tokens only)
         cost = (token_estimate / 1_000_000) * model["input_per_million"]
 
-        return {
+        # OpenRouter adds ~5% surcharge on top
+        if service_data.get("is_router"):
+            cost *= 1.05
+            reason_parts.append("OpenRouter routes to the underlying model + ~5% fee")
+
+        rec = {
             "service": service,
             "tier": tier,
             "name": model["name"],
@@ -3221,8 +3334,12 @@ class PromptArchitect:
             "cost_estimate": cost,
             "context_limit": model["context"],
             "best_for": model["best_for"],
-            "docs_url": MODEL_CATALOG[service]["docs_url"],
+            "docs_url": service_data["docs_url"],
         }
+        # Attach any service-level note (e.g. OpenCoder/OpenRouter caveats)
+        if service_data.get("note"):
+            rec["service_note"] = service_data["note"]
+        return rec
 
     def _format_model_toast(self, rec: dict) -> str:
         """Short toast message: Use [model name] — [reason]."""
@@ -3254,13 +3371,58 @@ class PromptArchitect:
         lines.append(f"  Best for:  {rec['best_for']}")
         if rec.get("cost_estimate", 0) > 0:
             lines.append(f"  Est. cost: ~${rec['cost_estimate']:.4f} (input only)")
+        else:
+            lines.append("  Est. cost: $0.00 (self-hosted / free)")
         lines.append(f"  Why:       {rec['reason']}")
+        if rec.get("service_note"):
+            lines.append(f"  Note:      {rec['service_note']}")
         lines.append(f"  Docs:      {rec['docs_url']}")
         return "\n".join(lines)
 
     # ══════════════════════════════════════════════════════════════
     # SEND TO AI WINDOW
     # ══════════════════════════════════════════════════════════════
+
+    def _search_terms_for(self, ai_name: str) -> list[str]:
+        """Return window-title search terms for a given AI service.
+        Looks up AI_SERVICES first, falls back to the name itself.
+        """
+        for display_name, _color, terms, _cat_key in AI_SERVICES:
+            if display_name.lower() == ai_name.lower():
+                return list(terms)
+        return [ai_name]
+
+    def _catalog_key_for(self, ai_name: str) -> str:
+        """Map display name → MODEL_CATALOG key (handles 'Grok' → 'Grok (xAI)' etc)."""
+        for display_name, _color, _terms, cat_key in AI_SERVICES:
+            if display_name.lower() == ai_name.lower():
+                return cat_key or ai_name
+        return ai_name
+
+    def _dispatch_other_ai(self, action: str) -> None:
+        """Route 'Grab'/'Send'/'Copy & Show Model' for the AI picked in the More AIs combobox."""
+        name = self._other_ai_var.get().strip()
+        if not name:
+            self._set_status("Pick an AI from the More AIs dropdown first")
+            return
+        if action == "grab":
+            self._grab_enhance_send(name)
+        elif action == "send":
+            self._send_to_ai_window(name)
+        elif action == "copy":
+            content = self._get_prompt_text_for_send()
+            if not content:
+                self._set_status("Generate a prompt first")
+                return
+            try:
+                import pyperclip
+                pyperclip.copy(content)
+            except Exception:
+                pass
+            rec = self._recommend_model(self._catalog_key_for(name), content)
+            rec_msg = self._format_model_toast(rec)
+            self._toast(f"Copied! {rec_msg}", duration=6000)
+            self._set_status(f"Copied. {rec_msg}")
 
     def _get_prompt_text_for_send(self) -> str:
         """Get just the prompt (no review) for sending to AI."""
@@ -3293,13 +3455,9 @@ class PromptArchitect:
         # Copy prompt to clipboard
         pyperclip.copy(content)
 
-        # Search keywords for each AI service
-        search_terms = {
-            "Claude": ["claude.ai", "Claude"],
-            "ChatGPT": ["chatgpt.com", "ChatGPT"],
-            "Gemini": ["gemini.google", "Gemini"],
-        }
-        terms = search_terms.get(ai_name, [ai_name])
+        # Resolve search terms + catalog key from AI_SERVICES
+        terms = self._search_terms_for(ai_name)
+        catalog_key = self._catalog_key_for(ai_name)
 
         # Try to find the window
         found = False
@@ -3317,7 +3475,7 @@ class PromptArchitect:
                 continue
 
         if not found:
-            rec = self._recommend_model(ai_name, content)
+            rec = self._recommend_model(catalog_key, content)
             rec_msg = self._format_model_toast(rec)
             messagebox.showwarning(
                 f"{ai_name} Not Found",
@@ -3337,12 +3495,12 @@ class PromptArchitect:
         try:
             pyautogui.hotkey('ctrl', 'v')
             # Model recommendation toast: show which model the user should pick
-            rec = self._recommend_model(ai_name, content)
+            rec = self._recommend_model(catalog_key, content)
             rec_msg = self._format_model_toast(rec)
             self._toast(f"Pasted into {ai_name}! {rec_msg}", duration=6000)
             self._set_status(f"{ai_name}: {rec_msg}")
             logger.info(
-                f"Send to {ai_name}: recommended {rec.get('name')} "
+                f"Send to {ai_name} ({catalog_key}): recommended {rec.get('name')} "
                 f"(tier={rec.get('tier')}, reason={rec.get('reason')})"
             )
         except Exception as e:
@@ -3414,12 +3572,7 @@ class PromptArchitect:
             # Step 1: Find window (or countdown for manual pick)
             target_win = None
             if ai_name:
-                search_terms = {
-                    "Claude": ["claude.ai", "Claude"],
-                    "ChatGPT": ["chatgpt.com", "ChatGPT"],
-                    "Gemini": ["gemini.google", "Gemini"],
-                }
-                terms = search_terms.get(ai_name, [ai_name])
+                terms = self._search_terms_for(ai_name)
                 for term in terms:
                     try:
                         for win in pyautogui.getAllWindows():
@@ -3511,7 +3664,7 @@ class PromptArchitect:
             enhanced = _pc.paste() or ""
         except Exception:
             enhanced = ""
-        rec = self._recommend_model(ai_name, enhanced)
+        rec = self._recommend_model(self._catalog_key_for(ai_name) if ai_name else None, enhanced)
         rec_msg = self._format_model_toast(rec)
 
         def do_paste():
