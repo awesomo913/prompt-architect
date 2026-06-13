@@ -97,7 +97,7 @@ pip install buildozer
 buildozer android debug
 ```
 
-`buildozer.spec` includes Android package requirements (`python3,kivy,plyer`) for APK builds.
+`buildozer.spec` includes Android APK requirements (`python3,kivy,plyer`) for the mobile edition; desktop `requirements.txt` dependencies are not required for the default Android build.
 
 ## Platform Notes (PC / Pi / Android)
 
