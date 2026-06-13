@@ -1,8 +1,8 @@
 # Prompt Architect
 
-A desktop tool that builds optimized, structured prompts for AI models — so you stop wasting tokens on bad prompts and start getting better results from Claude, ChatGPT, Gemini, and image/video generators.
+A multi-platform AI prompt builder that helps you create stronger prompts with built-in effectiveness scoring, reusable project presets, and platform-aware guidance for PC, Raspberry Pi, and Android workflows.
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20Pi-green) ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Python](https://img.shields.io/badge/Python-3.11+-blue) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20Pi%20%7C%20Android-green) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## What It Does
 
@@ -20,9 +20,9 @@ Then copy it or send it directly to your open Claude/ChatGPT/Gemini window.
 ## Features
 
 - **4 prompt categories**: Code, Conversation, Image generation, Video generation
-- **My Projects presets**: Auto-inject your project-specific conventions (struct formats, widget patterns, build commands) so you never re-explain them
+- **My Projects presets**: Auto-inject your project-specific conventions (build commands, patterns, project context) so you never re-explain them
 - **Rolling Update Chain**: Build follow-up prompts that carry forward context from previous changes
-- **Effectiveness Scoring**: 13-point analysis grades your prompt A+ through F with actionable suggestions
+- **Effectiveness Scoring**: multi-check analysis grades your prompt A+ through F with actionable suggestions
 - **Send to AI**: One-click paste into Claude, ChatGPT, or Gemini browser windows
 - **Templates**: Save/load your favorite configurations
 - **History**: Every prompt you generate is searchable and reusable
@@ -31,16 +31,27 @@ Then copy it or send it directly to your open Claude/ChatGPT/Gemini window.
 - **Launches maximized by default** — fills your screen immediately; resize or restore as needed (F11 or View menu)
 - **Full copy/paste support**: Ctrl+C/X/V/A on every text field; right-click context menus; explicit Copy buttons on the output area
 
-## Quick Start
+## Install + Run by Platform
 
-### Windows (Python)
+### PC (Windows / Linux / macOS desktop app)
+
+From the repository root:
+
 ```bash
-cd prompt_architect
+python -m pip install -r requirements.txt
 python prompt_architect.py
 ```
 
-### Windows (Batch file)
-Double-click `PromptArchitect.bat`
+Notes:
+- Python 3.11+ recommended.
+- `tkinter` is required for the desktop UI:
+  - Linux/Raspberry Pi OS: `sudo apt install python3-tk`
+  - Windows/macOS: usually bundled with the standard Python installer.
+- Optional desktop integrations (already in `requirements.txt`): `pyautogui`, `pyperclip`.
+
+Windows launcher options:
+- `PromptArchitect.bat` (runs the app)
+- `launch.bat` (installs `requirements.txt` first, then runs the app)
 
 ### Build your own .exe
 ```bash
@@ -48,17 +59,68 @@ pip install pyinstaller
 pyinstaller --onefile --windowed --name PromptArchitect prompt_architect.py
 ```
 
-### Raspberry Pi
+### Raspberry Pi (GUI + optional headless CLI)
+
+Install dependencies:
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip python3-tk
+python3 -m pip install -r requirements.txt
+```
+
+Run GUI mode:
+
 ```bash
 python3 prompt_architect_pi.py
 ```
 
-### Android (Kivy)
+Run CLI mode (headless over SSH):
+
+```bash
+python3 prompt_architect_pi.py --cli --target "Raspberry Pi App" --task "Build a temperature logger"
+```
+
+### Android (Kivy mobile edition)
+
+Desktop preview:
+
 ```bash
 pip install kivy
-python prompt_architect_android.py   # Preview on desktop
-# Or build APK: pip install buildozer && buildozer android debug
+python prompt_architect_android.py
 ```
+
+APK build (via Buildozer on Linux):
+
+```bash
+pip install buildozer
+buildozer android debug
+```
+
+`buildozer.spec` includes Android package requirements (`python3,kivy,plyer`) for APK builds.
+
+## Platform Notes (PC / Pi / Android)
+
+- **PC**: Full desktop UI (`prompt_architect.py`) with templates, history, diagnostics, and Send to AI integrations.
+- **Raspberry Pi**: Pi-optimized desktop UI plus optional headless CLI mode (`--cli`) for SSH-driven workflows.
+- **Android**: Mobile-focused Kivy frontend (`prompt_architect_android.py`) using shared prompt logic from `prompt_engine.py`.
+
+## Usage Walkthrough (short example)
+
+1. Open the app for your platform (`prompt_architect.py`, `prompt_architect_pi.py`, or `prompt_architect_android.py`).
+2. Choose a prompt category (for example, **Code**).
+3. Select a build target (for example, **Raspberry Pi App** or **PC Desktop App**).
+4. Pick enhancements and a reasoning framework.
+5. Enter your task (example: `Build a temperature logger with CSV export and error handling`).
+6. Click **Generate** to produce a structured prompt.
+7. Review the **Effectiveness Analysis** score/grade and apply quick-win suggestions if needed.
+8. Copy the prompt (or send it to your AI tool) and iterate with Update Chain follow-ups.
+
+## Testing
+
+- There is currently no configured automated unit/integration test suite in this repository.
+- `benchmark_prompt_architect.py` can be used for prompt quality/performance benchmarking.
+- Use the manual checklist below for UI and behavior verification.
 
 ## File Structure
 
@@ -69,14 +131,8 @@ python prompt_architect_android.py   # Preview on desktop
 | `prompt_architect_android.py` | Android/mobile edition (Kivy) |
 | `prompt_engine.py` | Shared prompt generation logic (no UI deps) |
 | `PromptArchitect.bat` | Windows launcher |
+| `launch.bat` | Windows launcher that installs requirements then starts app |
 | `buildozer.spec` | Android APK build config |
-
-## Requirements
-
-- Python 3.11+
-- tkinter (included with Python)
-- Optional: `pyautogui`, `pyperclip` (for Send to AI feature)
-- Optional: `kivy`, `plyer` (for Android edition)
 
 ## Keyboard Shortcuts
 
@@ -92,7 +148,7 @@ python prompt_architect_android.py   # Preview on desktop
 | `Ctrl+A` | Select all in focused text field |
 | `F11` | Toggle maximize / restore window |
 
-## Manual Test Checklist
+### Manual Test Checklist
 
 Use this checklist when verifying a new build:
 
