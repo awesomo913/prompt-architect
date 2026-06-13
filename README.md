@@ -22,7 +22,7 @@ Then copy it or send it directly to your open Claude/ChatGPT/Gemini window.
 - **4 prompt categories**: Code, Conversation, Image generation, Video generation
 - **My Projects presets**: Auto-inject your project-specific conventions (build commands, patterns, project context) so you never re-explain them
 - **Rolling Update Chain**: Build follow-up prompts that carry forward context from previous changes
-- **Effectiveness Scoring**: 12+ quality checks grade your prompt A+ through F with actionable suggestions
+- **Effectiveness Scoring**: 12 checks (13 for image/video prompts) grade your prompt A+ through F with actionable suggestions
 - **Send to AI**: One-click paste into Claude, ChatGPT, or Gemini browser windows
 - **Templates**: Save/load your favorite configurations
 - **History**: Every prompt you generate is searchable and reusable
