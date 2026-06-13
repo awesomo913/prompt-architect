@@ -119,6 +119,7 @@ buildozer android debug
 ## Testing
 
 - This repository does not include a configured automated unit/integration test suite.
+- Manual checklist-based verification is the current testing approach.
 - `benchmark_prompt_architect.py` can be used for prompt quality/performance benchmarking.
 - Use the manual checklist below for UI and behavior verification.
 
