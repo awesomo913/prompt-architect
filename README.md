@@ -22,7 +22,7 @@ Then copy it or send it directly to your open Claude/ChatGPT/Gemini window.
 - **4 prompt categories**: Code, Conversation, Image generation, Video generation
 - **My Projects presets**: Auto-inject your project-specific conventions (build commands, patterns, project context) so you never re-explain them
 - **Rolling Update Chain**: Build follow-up prompts that carry forward context from previous changes
-- **Effectiveness Scoring**: 12 checks (13 for image/video prompts) grade your prompt A+ through F with actionable suggestions
+- **Effectiveness Scoring**: 12 core checks, plus 1 additional check for image/video prompts, grade your prompt A+ through F with actionable suggestions
 - **Send to AI**: One-click paste into Claude, ChatGPT, or Gemini browser windows
 - **Templates**: Save/load your favorite configurations
 - **History**: Every prompt you generate is searchable and reusable
@@ -118,7 +118,7 @@ buildozer android debug
 
 ## Testing
 
-- At the time of writing, there is no configured automated unit/integration test suite in this repository.
+- Currently, there is no configured automated unit/integration test suite in this repository.
 - `benchmark_prompt_architect.py` can be used for prompt quality/performance benchmarking.
 - Use the manual checklist below for UI and behavior verification.
 
