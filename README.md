@@ -78,6 +78,14 @@ python prompt_architect_android.py   # Preview on desktop
 - Optional: `pyautogui`, `pyperclip` (for Send to AI feature)
 - Optional: `kivy`, `plyer` (for Android edition)
 
+## Automated Tests
+
+Run unit tests with:
+
+```bash
+python -m unittest discover -s tests
+```
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
